@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "lucide-react": "^1.41.0",
+    "recharts": "^3.10.1"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2"
+  }
+}
