@@ -7,7 +7,7 @@ const navigation = [
   ["/", "Home"], ["/platform", "Platform"], ["/projects", "Projects"],
   ["/cost-intelligence", "Cost Intelligence"], ["/progress-intelligence", "Progress"],
   ["/risk-intelligence", "Risk Intelligence"], ["/early-warnings", "Early Warnings"],
-  ["/analytics", "Analytics"], ["/what-if", "What-If"], ["/data", "Data"],
+  ["/analytics", "Analytics"], ["/model-evaluation", "Model Evaluation"], ["/what-if", "What-If"], ["/data", "Data"],
 ] as const;
 
 export default function Header() {

@@ -92,6 +92,173 @@ export interface ListProjectsParams {
   status?: ApiProjectStatus;
 }
 
+export type AnalyticsNumber = string | number | null;
+
+export interface ApiAnalyticsMetric {
+  value: AnalyticsNumber;
+  classification: "reported" | "derived" | "unavailable";
+  available: boolean;
+  reason: string | null;
+}
+
+export interface ApiAnalyticsNotice {
+  availability: "available" | "insufficient_observations" | "unavailable";
+  reason: string | null;
+}
+
+export interface ApiPortfolioSummary {
+  project_count: number;
+  projects_with_cost: number;
+  projects_with_progress: number;
+  reported_original_cost: ApiAnalyticsMetric;
+  reported_current_cost: ApiAnalyticsMetric;
+  reported_expenditure: ApiAnalyticsMetric;
+  reported_average_progress: ApiAnalyticsMetric;
+  derived_cost_escalation_amount: ApiAnalyticsMetric;
+  derived_cost_escalation_percentage: ApiAnalyticsMetric;
+  derived_expenditure_percentage: ApiAnalyticsMetric;
+  derived_schedule_extensions: ApiAnalyticsMetric;
+  risk_status: ApiAnalyticsNotice;
+}
+
+export interface ApiCostGroup {
+  group: string;
+  project_count: number;
+  reported_original_cost: AnalyticsNumber;
+  reported_current_cost: AnalyticsNumber;
+  reported_expenditure: AnalyticsNumber;
+  derived_escalation_amount: AnalyticsNumber;
+  derived_escalation_percentage: AnalyticsNumber;
+}
+
+export interface ApiCostAnalytics {
+  group_by: string;
+  groups: ApiCostGroup[];
+  notice: ApiAnalyticsNotice;
+}
+
+export interface ApiTrendPoint {
+  reporting_period: string;
+  reported_current_cost: AnalyticsNumber;
+  reported_expenditure: AnalyticsNumber;
+  reported_physical_progress: AnalyticsNumber;
+  observation_count: number;
+}
+
+export interface ApiHeatmapCell {
+  group: string;
+  reporting_period: string;
+  observation_count: number;
+  average_progress: AnalyticsNumber;
+}
+
+export interface ApiTrendAnalytics {
+  points: ApiTrendPoint[];
+  heatmap: ApiHeatmapCell[];
+  notice: ApiAnalyticsNotice;
+}
+
+export interface ApiCompositionItem {
+  label: string;
+  count: number;
+  percentage: AnalyticsNumber;
+}
+
+export interface ApiCompositionAnalytics {
+  category: string;
+  items: ApiCompositionItem[];
+  notice: ApiAnalyticsNotice;
+}
+
+export interface ApiHistogramBin {
+  lower: string | number;
+  upper: string | number;
+  count: number;
+}
+
+export interface ApiScatterPoint {
+  project_id: string;
+  project_name: string;
+  physical_progress: AnalyticsNumber;
+  expenditure_percentage: AnalyticsNumber;
+  escalation_percentage: AnalyticsNumber;
+}
+
+export interface ApiBoxPlotGroup {
+  group: string;
+  count: number;
+  minimum: AnalyticsNumber;
+  lower_quartile: AnalyticsNumber;
+  median: AnalyticsNumber;
+  upper_quartile: AnalyticsNumber;
+  maximum: AnalyticsNumber;
+}
+
+export interface ApiDistributionAnalytics {
+  escalation_histogram: ApiHistogramBin[];
+  progress_histogram: ApiHistogramBin[];
+  scatter: ApiScatterPoint[];
+  box_plot: ApiBoxPlotGroup[];
+  notice: ApiAnalyticsNotice;
+}
+
+export interface ApiBenchmarkRow {
+  rank: number;
+  group: string;
+  project_count: number;
+  average_progress: AnalyticsNumber;
+  average_expenditure_percentage: AnalyticsNumber;
+  average_escalation_percentage: AnalyticsNumber;
+}
+
+export interface ApiBenchmarkingAnalytics {
+  group_by: string;
+  rows: ApiBenchmarkRow[];
+  notice: ApiAnalyticsNotice;
+}
+
+export interface ApiPortfolioAnalytics {
+  summary: ApiPortfolioSummary;
+  cost: ApiCostAnalytics;
+  trends: ApiTrendAnalytics;
+  composition: ApiCompositionAnalytics;
+  distributions: ApiDistributionAnalytics;
+  benchmarking: ApiBenchmarkingAnalytics;
+}
+
+export interface ApiMLEvaluationResult {
+  task: "cost_revision" | "schedule_revision";
+  approach: "conventional" | "ml";
+  sample_count: number;
+  positive_rate: number;
+  precision: number;
+  recall: number;
+  f1: number;
+  roc_auc: number | null;
+  pr_auc: number | null;
+  confusion_matrix: number[][];
+}
+
+export interface ApiMLEvaluation {
+  availability: "AVAILABLE" | "INSUFFICIENT_DATA";
+  cost_comparison: ApiMLEvaluationResult[];
+  schedule_comparison: ApiMLEvaluationResult[];
+  conclusion: Record<string, string>;
+  evaluation_version: string;
+  evaluation_timestamp: string;
+  limitations: string[];
+}
+
+export interface PortfolioAnalyticsParams {
+  reporting_period?: string;
+  state?: string;
+  ministry?: string;
+  sector?: string;
+  implementing_agency?: string;
+  group_by?: "state" | "ministry" | "sector" | "implementing_agency";
+  category?: "state" | "ministry" | "sector" | "implementing_agency" | "status";
+}
+
 function appendQueryParam(
   params: URLSearchParams,
   key: string,
@@ -131,6 +298,29 @@ export function listProjects(
   );
 }
 
+export function getPortfolioAnalytics(
+  params: PortfolioAnalyticsParams = {},
+  options?: RequestInit,
+): Promise<ApiPortfolioAnalytics> {
+  const query = new URLSearchParams();
+  appendQueryParam(query, "reporting_period", params.reporting_period);
+  appendQueryParam(query, "state", params.state);
+  appendQueryParam(query, "ministry", params.ministry);
+  appendQueryParam(query, "sector", params.sector);
+  appendQueryParam(query, "implementing_agency", params.implementing_agency);
+  appendQueryParam(query, "group_by", params.group_by);
+  appendQueryParam(query, "category", params.category);
+  const suffix = query.toString();
+  return apiRequest<ApiPortfolioAnalytics>(
+    `/api/v1/analytics${suffix ? `?${suffix}` : ""}`,
+    { ...PROJECT_FETCH_OPTIONS, ...options },
+  );
+}
+
+export function getMLEvaluation(options?: RequestInit): Promise<ApiMLEvaluation> {
+  return apiRequest<ApiMLEvaluation>("/api/v1/ml-evaluation", { ...PROJECT_FETCH_OPTIONS, ...options });
+}
+
 export interface ApiProgressHistory {
   id: string;
   project_id: string;
@@ -168,6 +358,10 @@ export interface ApiCostIntelligence {
   absolute_increase: string | number | null;
   escalation_percentage: string | number | null;
   expenditure: string | number | null;
+  escalation_amount: string | number | null;
+  cumulative_expenditure: string | number | null;
+  expenditure_percentage: string | number | null;
+  historical_observations: ApiCostHistory[];
 }
 
 export interface ApiProgressIntelligence {
@@ -196,6 +390,159 @@ export interface ApiProjectIntelligence {
   progress: ApiProgressIntelligence;
   schedule: ApiScheduleIntelligence;
   data_quality: ApiDataQuality;
+}
+
+export interface ApiCostPredictionSignal {
+  feature: string;
+  value: string;
+  contribution: string | number;
+}
+
+export interface ApiCostPredictionExplanation {
+  positive_signals: ApiCostPredictionSignal[];
+  negative_signals: ApiCostPredictionSignal[];
+  model_note: string;
+}
+
+export interface ApiCostRevisionPrediction {
+  project_id: string;
+  availability: "AVAILABLE" | "INSUFFICIENT_DATA" | "UNAVAILABLE";
+  prediction: boolean | null;
+  probability: string | number | null;
+  confidence_label: string | null;
+  model_version: string;
+  cutoff_reporting_period: string | null;
+  feature_coverage: string | number;
+  features_used: string[];
+  limitations: string[];
+  explanation: ApiCostPredictionExplanation | null;
+}
+
+export interface ApiCostIntelligenceResponse {
+  project_id: string;
+  availability: "AVAILABLE" | "INSUFFICIENT_DATA" | "UNAVAILABLE";
+  original_cost: string | number | null;
+  revised_current_cost: string | number | null;
+  expenditure: string | number | null;
+  current_cost_overrun_amount: string | number | null;
+  current_cost_overrun_percentage: string | number | null;
+  escalation_amount: string | number | null;
+  escalation_percentage: string | number | null;
+  expenditure_percentage: string | number | null;
+  amount_above_revised_cost: string | number | null;
+  expenditure_exceeds_revised_cost: boolean | null;
+  completion_cost_availability: "AVAILABLE" | "UNAVAILABLE";
+  completion_cost_overrun_amount: string | number | null;
+  completion_cost_overrun_percentage: string | number | null;
+  prediction: ApiCostRevisionPrediction;
+  limitations: string[];
+}
+
+export interface ApiScheduleRevisionPrediction {
+  project_id: string;
+  availability: "AVAILABLE" | "INSUFFICIENT_DATA" | "UNAVAILABLE";
+  prediction: boolean | null;
+  probability: string | number | null;
+  model_version: string;
+  cutoff_reporting_period: string | null;
+  feature_coverage: string | number;
+  limitations: string[];
+}
+
+export type ApiRiskLevel = "LOW" | "MODERATE" | "HIGH" | "CRITICAL" | "UNAVAILABLE";
+export type ApiRiskSeverity = ApiRiskLevel;
+export type ApiAssessmentAvailability = "AVAILABLE" | "INSUFFICIENT_DATA" | "UNAVAILABLE";
+
+export interface ApiRiskFactor {
+  factor: string;
+  value: string | number | null;
+  unit: string | null;
+  contribution: number | null;
+  severity: ApiRiskSeverity;
+  classification: "REPORTED" | "DERIVED" | "UNAVAILABLE";
+  available: boolean;
+  explanation: string;
+}
+
+export interface ApiRiskAssessment {
+  project_id: string;
+  score: number | null;
+  level: ApiRiskLevel;
+  availability: ApiAssessmentAvailability;
+  data_coverage: string | number;
+  confidence_label: string;
+  factors: ApiRiskFactor[];
+  explanation: string;
+  limitations: string[];
+  predicted: boolean;
+}
+
+export interface ApiRiskPortfolioItem {
+  project_id: string;
+  project_name: string;
+  score: number | null;
+  level: ApiRiskLevel;
+  data_coverage: string | number;
+  cost_pressure: number | null;
+  schedule_pressure: number | null;
+  progress_pressure: number | null;
+}
+
+export interface ApiRiskSummary {
+  projects_assessed: number;
+  projects_unavailable: number;
+  low_projects: number;
+  moderate_projects: number;
+  high_projects: number;
+  critical_projects: number;
+  average_score: string | number | null;
+  average_data_coverage: string | number | null;
+  top_projects: ApiRiskPortfolioItem[];
+  limitations: string[];
+}
+
+export interface ApiRiskSummaryResponse {
+  availability: ApiAssessmentAvailability;
+  summary: ApiRiskSummary;
+}
+
+export type ApiWarningType = "COST_ESCALATION" | "SCHEDULE_EXTENSION" | "EXPENDITURE_PROGRESS_DIVERGENCE" | "PROGRESS_SLOWDOWN" | "DATA_QUALITY";
+export type ApiWarningSeverity = "INFO" | "MODERATE" | "HIGH" | "CRITICAL";
+
+export interface ApiEarlyWarning {
+  warning_id: string;
+  project_id: string;
+  project_name: string;
+  type: ApiWarningType;
+  severity: ApiWarningSeverity;
+  title: string;
+  message: string;
+  evidence: { values: Record<string, string | number | boolean | null> };
+  recommended_action: string;
+  source_type: "REPORTED" | "DERIVED" | "DATA_QUALITY";
+  generated_at: string;
+}
+
+export interface ApiWarningList {
+  summary: { critical: number; high: number; moderate: number; info: number; total: number };
+  items: ApiEarlyWarning[];
+  limitations: string[];
+  page: number;
+  page_size: number;
+}
+
+export interface RiskFilterParams {
+  state?: string;
+  ministry?: string;
+  sector?: string;
+  implementing_agency?: string;
+}
+
+export interface WarningFilterParams extends RiskFilterParams {
+  severity?: ApiWarningSeverity;
+  warning_type?: ApiWarningType;
+  page?: number;
+  page_size?: number;
 }
 
 const PROJECT_FETCH_OPTIONS: RequestInit = {
@@ -239,4 +586,75 @@ export function getProjectIntelligence(
     `/api/v1/projects/${encodeURIComponent(projectId)}/intelligence`,
     { ...PROJECT_FETCH_OPTIONS, ...options },
   );
+}
+
+/** Loads reported/derived cost intelligence and the existing cost revision prediction. */
+export function getCostIntelligence(
+  projectId: string,
+  options?: RequestInit,
+): Promise<ApiCostIntelligenceResponse> {
+  return apiRequest<ApiCostIntelligenceResponse>(
+    `/api/v1/projects/${encodeURIComponent(projectId)}/cost-intelligence`,
+    { ...PROJECT_FETCH_OPTIONS, ...options },
+  );
+}
+
+function filterQuery(params: RiskFilterParams): string {
+  const query = new URLSearchParams();
+  appendQueryParam(query, "state", params.state);
+  appendQueryParam(query, "ministry", params.ministry);
+  appendQueryParam(query, "sector", params.sector);
+  appendQueryParam(query, "implementing_agency", params.implementing_agency);
+  const suffix = query.toString();
+  return suffix ? `?${suffix}` : "";
+}
+
+export function getProjectRisk(projectId: string, options?: RequestInit): Promise<ApiRiskAssessment> {
+  return apiRequest<ApiRiskAssessment>(`/api/v1/projects/${encodeURIComponent(projectId)}/risk`, { ...PROJECT_FETCH_OPTIONS, ...options });
+}
+
+export function getProjectWarnings(projectId: string, options?: RequestInit): Promise<ApiEarlyWarning[]> {
+  return apiRequest<ApiEarlyWarning[]>(`/api/v1/projects/${encodeURIComponent(projectId)}/warnings`, { ...PROJECT_FETCH_OPTIONS, ...options });
+}
+
+export function getCostRevisionPrediction(projectId: string, options?: RequestInit): Promise<ApiCostRevisionPrediction> {
+  return apiRequest<ApiCostRevisionPrediction>(`/api/v1/projects/${encodeURIComponent(projectId)}/prediction/cost`, { ...PROJECT_FETCH_OPTIONS, ...options });
+}
+
+export function getScheduleRevisionPrediction(projectId: string, options?: RequestInit): Promise<ApiScheduleRevisionPrediction> {
+  return apiRequest<ApiScheduleRevisionPrediction>(`/api/v1/projects/${encodeURIComponent(projectId)}/prediction/schedule`, { ...PROJECT_FETCH_OPTIONS, ...options });
+}
+
+export interface ApiProjectAction {
+  action_id: string;
+  priority: "CRITICAL" | "HIGH" | "MODERATE" | "INFO";
+  title: string;
+  reason: string;
+  evidence: string;
+  recommended_check: string;
+  source: string;
+}
+
+export interface ApiProjectActionsResponse {
+  project_id: string;
+  actions: ApiProjectAction[];
+  action_count: number;
+}
+
+export function getProjectActions(projectId: string, options?: RequestInit): Promise<ApiProjectActionsResponse> {
+  return apiRequest<ApiProjectActionsResponse>(`/api/v1/projects/${encodeURIComponent(projectId)}/actions`, { ...PROJECT_FETCH_OPTIONS, ...options });
+}
+
+export function getRiskSummary(params: RiskFilterParams = {}, options?: RequestInit): Promise<ApiRiskSummaryResponse> {
+  return apiRequest<ApiRiskSummaryResponse>(`/api/v1/risk/summary${filterQuery(params)}`, { ...PROJECT_FETCH_OPTIONS, ...options });
+}
+
+export function listWarnings(params: WarningFilterParams = {}, options?: RequestInit): Promise<ApiWarningList> {
+  const query = new URLSearchParams(filterQuery(params).replace(/^\?/, ""));
+  appendQueryParam(query, "severity", params.severity);
+  appendQueryParam(query, "warning_type", params.warning_type);
+  appendQueryParam(query, "page", params.page);
+  appendQueryParam(query, "page_size", params.page_size);
+  const suffix = query.toString();
+  return apiRequest<ApiWarningList>(`/api/v1/warnings${suffix ? `?${suffix}` : ""}`, { ...PROJECT_FETCH_OPTIONS, ...options });
 }

@@ -18,6 +18,7 @@ import {
   getProject,
   getProjectHistory,
   getProjectIntelligence,
+  getCostIntelligence,
   getProjectRisk,
   getProjectWarnings,
   getCostRevisionPrediction,
@@ -26,6 +27,7 @@ import {
   type ApiProject,
   type ApiProjectHistory,
   type ApiProjectIntelligence,
+  type ApiCostIntelligenceResponse,
   type ApiRiskAssessment,
   type ApiEarlyWarning,
   type ApiCostRevisionPrediction,
@@ -175,6 +177,8 @@ export default function ProjectDetailPage({
     useState<ApiProjectHistory | null>(null);
   const [intelligence, setIntelligence] =
     useState<ApiProjectIntelligence | null>(null);
+  const [costIntelligence, setCostIntelligence] =
+    useState<ApiCostIntelligenceResponse | null>(null);
   const [risk, setRisk] =
     useState<ApiRiskAssessment | null>(null);
   const [warnings, setWarnings] =
@@ -204,6 +208,7 @@ export default function ProjectDetailPage({
         getProject(projectId),
         getProjectHistory(projectId),
         getProjectIntelligence(projectId),
+        getCostIntelligence(projectId),
         getProjectRisk(projectId),
         getProjectWarnings(projectId),
         getCostRevisionPrediction(projectId),
@@ -215,6 +220,7 @@ export default function ProjectDetailPage({
             projectResponse,
             historyResponse,
             intelligenceResponse,
+            costIntelligenceResponse,
             riskResponse,
             warningResponse,
             predictionResponse,
@@ -226,6 +232,7 @@ export default function ProjectDetailPage({
             setProject(projectResponse);
             setHistory(historyResponse);
             setIntelligence(intelligenceResponse);
+            setCostIntelligence(costIntelligenceResponse);
             setRisk(riskResponse);
             setWarnings(warningResponse);
             setCostPrediction(predictionResponse);
@@ -313,6 +320,7 @@ export default function ProjectDetailPage({
     !project ||
     !history ||
     !intelligence ||
+    !costIntelligence ||
     !risk ||
     !costPrediction ||
     !schedulePrediction
@@ -356,7 +364,7 @@ export default function ProjectDetailPage({
   );
 
   const featureCoverage = numeric(
-    costPrediction.feature_coverage,
+    costIntelligence.prediction.feature_coverage,
   );
 
   return (
@@ -1229,6 +1237,38 @@ export default function ProjectDetailPage({
               description="Derived only from the reported project record and ordered historical observations."
             />
 
+            <div className="nd-prediction-card nd-cost-intelligence-panel">
+              <div className="nd-card-header">
+                <div>
+                  <span>Cost intelligence</span>
+                  <h3>Current cost-overrun assessment</h3>
+                </div>
+                <Wallet size={19} />
+              </div>
+
+              <p className="nd-panel-label">REPORTED / DERIVED</p>
+              <div className="nd-intelligence-grid">
+                <MetricCard icon={<Wallet size={18} />} label="Original cost" value={money(costIntelligence.original_cost)} description="Reported original cost" />
+                <MetricCard icon={<TrendingUp size={18} />} label="Current / revised cost" value={money(costIntelligence.revised_current_cost)} description="Latest reported cost" />
+                <MetricCard icon={<Wallet size={18} />} label="Expenditure" value={money(costIntelligence.expenditure)} description="Cumulative reported expenditure" />
+                <MetricCard icon={<TrendingUp size={18} />} label="Current cost overrun" value={money(costIntelligence.current_cost_overrun_amount)} description={costIntelligence.current_cost_overrun_percentage == null ? "Unavailable" : `${numeric(costIntelligence.current_cost_overrun_percentage)?.toLocaleString("en-IN", { maximumFractionDigits: 1 })}% of original cost`} />
+                <MetricCard icon={<Activity size={18} />} label="Overrun %" value={costIntelligence.current_cost_overrun_percentage == null ? "Not available" : `${numeric(costIntelligence.current_cost_overrun_percentage)?.toLocaleString("en-IN", { maximumFractionDigits: 1 })}%`} description="Current assessment" />
+                <MetricCard icon={<TrendingUp size={18} />} label="Above revised cost" value={money(costIntelligence.amount_above_revised_cost)} description={costIntelligence.expenditure_exceeds_revised_cost ? "Expenditure exceeds revised cost" : "Not applicable"} />
+              </div>
+
+              <p className="nd-panel-label">PREDICTED</p>
+              <div className="nd-prediction-meta">
+                <span>Future reported cost revision: {costIntelligence.prediction.availability === "AVAILABLE" ? (costIntelligence.prediction.prediction ? "Revision indicated" : "No revision indicated") : "Insufficient data"}</span>
+                <span>Probability {probabilityLabel(costIntelligence.prediction.probability)}</span>
+                <span>Cutoff {costIntelligence.prediction.cutoff_reporting_period || "Not available"}</span>
+                <span>Model {costIntelligence.prediction.model_version || "Not available"}</span>
+                <span>Coverage {featureCoverage == null ? "Not available" : `${(featureCoverage * 100).toLocaleString("en-IN", { maximumFractionDigits: 1 })}%`}</span>
+              </div>
+              {costIntelligence.limitations.map((limitation) => (
+                <p className="nd-card-note" key={limitation}>{limitation}</p>
+              ))}
+            </div>
+
             <div className="nd-intelligence-grid">
 
               <MetricCard
@@ -1479,87 +1519,266 @@ export default function ProjectDetailPage({
 
                 {/* PROGRESS CHART */}
 
-                <div className="nd-history-chart-card">
+ {/* PROGRESS LINE CHART */}
 
-                  <div className="nd-card-header">
+<div className="nd-history-chart-card">
 
-                    <div>
-                      <span>
-                        Progress trajectory
-                      </span>
+  <div className="nd-card-header">
+    <div>
+      <span>Progress trajectory</span>
 
-                      <h3>
-                        Physical progress
-                      </h3>
-                    </div>
+      <h3>Physical progress</h3>
+    </div>
 
-                    <Activity size={18} />
+    <Activity size={18} />
+  </div>
 
-                  </div>
+  {progress.length > 0 ? (
+    (() => {
+      const chartData = progress.reduce<
+        Array<{
+          id: string;
+          date: string | null;
+          value: number;
+        }>
+      >((result, item) => {
+        const value = numeric(item.physical_progress);
 
-                  {progressValues.length > 0 ? (
-                    <>
-                      <div className="nd-bar-chart">
+        if (
+          value === null ||
+          !Number.isFinite(value)
+        ) {
+          return result;
+        }
 
-                        {progressValues.map(
-                          (item, index) => (
-                            <div
-                              className="nd-bar-column"
-                              key={`${item}-${index}`}
-                            >
+        result.push({
+          id: String(item.id),
+          date: item.reporting_period ?? null,
+          value,
+        });
 
-                              <span className="nd-bar-value">
-                                {item}%
-                              </span>
+        return result;
+      }, []);
 
-                              <div className="nd-bar-track">
+      if (chartData.length === 0) {
+        return (
+          <div className="nd-chart-empty">
+            No progress observations available.
+          </div>
+        );
+      }
 
-                                <div
-                                  className="nd-bar"
-                                  style={{
-                                    height: `${Math.max(
-                                      4,
-                                      Math.min(
-                                        100,
-                                        item,
-                                      ),
-                                    )}%`,
-                                  }}
-                                />
+      const width = 820;
+      const height = 320;
 
-                              </div>
+      const left = 60;
+      const right = 20;
+      const top = 25;
+      const bottom = 55;
 
-                            </div>
-                          ),
-                        )}
+      const chartWidth =
+        width - left - right;
 
-                      </div>
+      const chartHeight =
+        height - top - bottom;
 
-                      <div className="nd-chart-labels">
+      const points = chartData.map(
+        (item, index) => {
+          const x =
+            chartData.length === 1
+              ? left + chartWidth / 2
+              : left +
+                (index /
+                  (chartData.length - 1)) *
+                  chartWidth;
 
-                        {progress
-                          .slice(
-                            -progressValues.length,
-                          )
-                          .map((item) => (
-                            <span
-                              key={item.id}
-                            >
-                              {dateLabel(
-                                item.reporting_period,
-                              )}
-                            </span>
-                          ))}
+          const value = Math.max(
+            0,
+            Math.min(100, item.value),
+          );
 
-                      </div>
-                    </>
-                  ) : (
-                    <div className="nd-chart-empty">
-                      No progress observations available.
-                    </div>
-                  )}
+          const y =
+            top +
+            ((100 - value) / 100) *
+              chartHeight;
 
-                </div>
+          return {
+            id: item.id,
+            date: item.date,
+            value,
+            x,
+            y,
+          };
+        },
+      );
+
+      const linePath = points
+        .map(
+          (point, index) =>
+            `${index === 0 ? "M" : "L"} ${
+              point.x
+            } ${point.y}`,
+        )
+        .join(" ");
+
+      const firstPoint =
+        points.length > 0
+          ? points[0]
+          : null;
+
+      const lastPoint =
+        points.length > 0
+          ? points[points.length - 1]
+          : null;
+
+      const areaPath =
+        firstPoint && lastPoint
+          ? `
+              ${linePath}
+              L ${lastPoint.x} ${
+                top + chartHeight
+              }
+              L ${firstPoint.x} ${
+                top + chartHeight
+              }
+              Z
+            `
+          : "";
+
+      const latestPoint = lastPoint;
+
+      return (
+        <div className="nd-line-chart">
+
+          <div className="nd-line-chart-meta">
+            <span>
+              Physical progress over reporting periods
+            </span>
+
+            <strong>
+              {latestPoint
+                ? latestPoint.value.toFixed(1)
+                : "Not available"}
+              {latestPoint ? "%" : ""}
+            </strong>
+          </div>
+
+          <svg
+            className="nd-progress-line-svg"
+            viewBox={`0 0 ${width} ${height}`}
+            preserveAspectRatio="none"
+            role="img"
+            aria-label="Physical progress history"
+          >
+
+            {/* Horizontal grid */}
+
+            {[100, 75, 50, 25, 0].map(
+              (value) => {
+                const y =
+                  top +
+                  ((100 - value) / 100) *
+                    chartHeight;
+
+                return (
+                  <g key={value}>
+
+                    <line
+                      x1={left}
+                      x2={width - right}
+                      y1={y}
+                      y2={y}
+                      className="nd-chart-grid-line"
+                    />
+
+                    <text
+                      x={left - 10}
+                      y={y + 4}
+                      textAnchor="end"
+                      className="nd-chart-axis-label"
+                    >
+                      {value}%
+                    </text>
+
+                  </g>
+                );
+              },
+            )}
+
+            {/* Area */}
+
+            {areaPath ? (
+              <path
+                d={areaPath}
+                className="nd-progress-area"
+              />
+            ) : null}
+
+            {/* Line */}
+
+            {linePath ? (
+              <path
+                d={linePath}
+                className="nd-progress-line"
+                fill="none"
+              />
+            ) : null}
+
+            {/* Points */}
+
+            {points.map((point) => (
+              <g key={point.id}>
+
+                <circle
+                  cx={point.x}
+                  cy={point.y}
+                  r="4"
+                  className="nd-progress-point"
+                />
+
+                <text
+                  x={point.x}
+                  y={point.y - 12}
+                  textAnchor="middle"
+                  className="nd-progress-value"
+                >
+                  {point.value.toFixed(0)}%
+                </text>
+
+              </g>
+            ))}
+
+            {/* X-axis labels */}
+
+            {points.map((point) => (
+              <text
+                key={`label-${point.id}`}
+                x={point.x}
+                y={height - 18}
+                textAnchor="middle"
+                className="nd-chart-axis-label"
+              >
+                {dateLabel(point.date)}
+              </text>
+            ))}
+
+          </svg>
+
+          <div className="nd-chart-legend">
+            <span className="nd-legend-line" />
+            Physical progress
+          </div>
+
+        </div>
+      );
+    })()
+  ) : (
+    <div className="nd-chart-empty">
+      No progress observations available.
+    </div>
+  )}
+
+</div>
 
                 {/* HISTORY TABLE */}
 
