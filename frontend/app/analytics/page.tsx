@@ -26,23 +26,26 @@ import {
   BoxPlotChart,
   HeatmapTable,
 } from "@/components/charts";
+import { AnimatedNumber } from "@/components/AnimatedNumber";
 
 /* ─────────────────────── Metric tile ─────────────────────────── */
 function MetricTile({
   label,
   value,
+  format,
   sub,
   derived,
 }: {
   label: string;
-  value: string;
+  value: string | number | null | undefined;
+  format: (value: number) => string;
   sub?: string;
   derived?: boolean;
 }) {
   return (
     <div className={`nd-intelligence-item${derived ? " nd-derived" : " nd-reported"}`}>
       <p className="nd-label">{label}</p>
-      <strong>{value}</strong>
+      <strong><AnimatedNumber value={value} format={format} fallback="—" /></strong>
       {sub && <p>{sub}</p>}
     </div>
   );
@@ -235,7 +238,7 @@ export default function AnalyticsPage() {
           <aside className="nd-status-panel">
             <p className="nd-eyebrow">Portfolio scope</p>
             <strong>
-              {loading ? "Loading…" : data ? data.summary.project_count.toLocaleString("en-IN") : "—"}
+              {loading ? "Loading…" : <AnimatedNumber value={data?.summary.project_count} format={(value) => Math.round(value).toLocaleString("en-IN")} fallback="—" />}
             </strong>
             <p>Projects in current filter scope</p>
           </aside>
@@ -321,12 +324,12 @@ export default function AnalyticsPage() {
               <SectionIndex n="01" title="Portfolio summary" />
               <p className="nd-analytics-kicker">What is happening across the current reporting scope: scale, capital committed, cash spent, and reported progress.</p>
               <div className="nd-intelligence-grid">
-                <MetricTile label="Total projects" value={fmtInt(sum?.project_count)} sub="Current filter scope" />
-                <MetricTile label="Original cost" value={fmtCrore(toNum(sum?.reported_original_cost.value))} sub="Reported value" />
-                <MetricTile label="Current cost" value={fmtCrore(toNum(sum?.reported_current_cost.value))} sub="Reported value" />
-                <MetricTile label="Expenditure" value={fmtCrore(toNum(sum?.reported_expenditure.value))} sub="Reported value" />
-                <MetricTile label="Avg. cost escalation" value={fmtPct(toNum(sum?.derived_cost_escalation_percentage.value))} sub="Derived metric" derived />
-                <MetricTile label="Physical progress" value={fmtPct(toNum(sum?.reported_average_progress.value))} sub="Reported value" />
+                <MetricTile label="Total projects" value={sum?.project_count} format={fmtInt} sub="Current filter scope" />
+                <MetricTile label="Original cost" value={toNum(sum?.reported_original_cost.value)} format={fmtCrore} sub="Reported value" />
+                <MetricTile label="Current cost" value={toNum(sum?.reported_current_cost.value)} format={fmtCrore} sub="Reported value" />
+                <MetricTile label="Expenditure" value={toNum(sum?.reported_expenditure.value)} format={fmtCrore} sub="Reported value" />
+                <MetricTile label="Avg. cost escalation" value={toNum(sum?.derived_cost_escalation_percentage.value)} format={fmtPct} sub="Derived metric" derived />
+                <MetricTile label="Physical progress" value={toNum(sum?.reported_average_progress.value)} format={fmtPct} sub="Reported value" />
               </div>
             </div>
           </section>

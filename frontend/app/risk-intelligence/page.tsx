@@ -8,26 +8,16 @@ import {
   getRiskSummary,
   type ApiRiskSummaryResponse,
 } from "@/lib/api";
+import { AnimatedNumber } from "@/components/AnimatedNumber";
 
 /* -------------------------------------------------------------------------- */
 /* Helpers                                                                    */
 /* -------------------------------------------------------------------------- */
 
-const number = (
-  value: string | number | null | undefined,
-  suffix = "",
-) => {
-  if (value === null || value === undefined || value === "") {
-    return "Not available";
-  }
-
+const numeric = (value: string | number | null | undefined) => {
+  if (value === null || value === undefined || value === "") return null;
   const parsed = Number(value);
-
-  return Number.isFinite(parsed)
-    ? `${parsed.toLocaleString("en-IN", {
-        maximumFractionDigits: 2,
-      })}${suffix}`
-    : "Not available";
+  return Number.isFinite(parsed) ? parsed : null;
 };
 
 const percentage = (
@@ -457,33 +447,27 @@ export default function RiskIntelligencePage() {
                 <div className="ri-ledger">
                   <MetricBlock
                     label="Projects assessed"
-                    value={summary.projects_assessed.toLocaleString(
-                      "en-IN",
-                    )}
+                    value={<AnimatedNumber value={summary.projects_assessed} format={(value) => Math.round(value).toLocaleString("en-IN")} />}
                     note="Assessment available"
                   />
 
                   <MetricBlock
                     label="High attention"
-                    value={summary.high_projects.toLocaleString(
-                      "en-IN",
-                    )}
+                    value={<AnimatedNumber value={summary.high_projects} format={(value) => Math.round(value).toLocaleString("en-IN")} />}
                     note="Heuristic level: high"
                     accent
                   />
 
                   <MetricBlock
                     label="Critical attention"
-                    value={summary.critical_projects.toLocaleString(
-                      "en-IN",
-                    )}
+                    value={<AnimatedNumber value={summary.critical_projects} format={(value) => Math.round(value).toLocaleString("en-IN")} />}
                     note="Heuristic level: critical"
                     accent
                   />
 
                   <MetricBlock
                     label="Average score"
-                    value={number(summary.average_score)}
+                    value={<AnimatedNumber value={numeric(summary.average_score)} format={(value) => value.toLocaleString("en-IN", { maximumFractionDigits: 2 })} />}
                     note="Operational score, not probability"
                   />
                 </div>
@@ -532,12 +516,7 @@ export default function RiskIntelligencePage() {
                     <strong>
                       {coverage === null
                         ? "Not available"
-                        : `${coverage.toLocaleString(
-                            "en-IN",
-                            {
-                              maximumFractionDigits: 1,
-                            },
-                          )}%`}
+                      : <AnimatedNumber value={coverage} format={(value) => `${value.toLocaleString("en-IN", { maximumFractionDigits: 1 })}%`} />}
                     </strong>
                   </div>
 
@@ -628,7 +607,7 @@ export default function RiskIntelligencePage() {
                                   </td>
 
                                   <td className="ri-score">
-                                    {number(project.score)}
+                                    <AnimatedNumber value={numeric(project.score)} format={(value) => value.toLocaleString("en-IN", { maximumFractionDigits: 2 })} />
                                   </td>
 
                                   <td>
@@ -642,21 +621,15 @@ export default function RiskIntelligencePage() {
                                   </td>
 
                                   <td>
-                                    {number(
-                                      project.cost_pressure,
-                                    )}
+                                    <AnimatedNumber value={numeric(project.cost_pressure)} format={(value) => value.toLocaleString("en-IN", { maximumFractionDigits: 2 })} />
                                   </td>
 
                                   <td>
-                                    {number(
-                                      project.schedule_pressure,
-                                    )}
+                                    <AnimatedNumber value={numeric(project.schedule_pressure)} format={(value) => value.toLocaleString("en-IN", { maximumFractionDigits: 2 })} />
                                   </td>
 
                                   <td>
-                                    {number(
-                                      project.progress_pressure,
-                                    )}
+                                    <AnimatedNumber value={numeric(project.progress_pressure)} format={(value) => value.toLocaleString("en-IN", { maximumFractionDigits: 2 })} />
                                   </td>
 
                                   <td>

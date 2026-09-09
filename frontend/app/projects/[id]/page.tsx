@@ -34,6 +34,7 @@ import {
   type ApiScheduleRevisionPrediction,
   type ApiProjectAction,
 } from "@/lib/api";
+import { AnimatedNumber } from "@/components/AnimatedNumber";
 
 const numeric = (value: string | number | null | undefined) =>
   value === null || value === undefined || value === "" ? null : Number(value);
@@ -66,18 +67,6 @@ const dateLabel = (value: string | null | undefined) => {
     month: "short",
     year: "numeric",
   }).format(date);
-};
-
-const probabilityLabel = (
-  value: string | number | null | undefined,
-) => {
-  const parsed = numeric(value);
-
-  return parsed === null || !Number.isFinite(parsed)
-    ? "Not available"
-    : `${(parsed * 100).toLocaleString("en-IN", {
-        maximumFractionDigits: 1,
-      })}%`;
 };
 
 const riskLevelClass = (level: string | null | undefined) => {
@@ -148,7 +137,7 @@ function MetricCard({
 }: {
   icon: React.ReactNode;
   label: string;
-  value: string;
+  value: React.ReactNode;
   description?: string;
 }) {
   return (
@@ -584,41 +573,28 @@ export default function ProjectDetailPage({
               <MetricCard
                 icon={<Wallet size={18} />}
                 label="Original approved cost"
-                value={money(
-                  project.original_cost,
-                )}
+                value={<AnimatedNumber value={numeric(project.original_cost)} format={(value) => money(value)} />}
                 description="Reported value"
               />
 
               <MetricCard
                 icon={<TrendingUp size={18} />}
                 label="Latest current cost"
-                value={money(
-                  project.current_cost,
-                )}
+                value={<AnimatedNumber value={numeric(project.current_cost)} format={(value) => money(value)} />}
                 description="Reported value"
               />
 
               <MetricCard
                 icon={<Activity size={18} />}
                 label="Cumulative expenditure"
-                value={money(
-                  project.expenditure,
-                )}
+                value={<AnimatedNumber value={numeric(project.expenditure)} format={(value) => money(value)} />}
                 description="Reported value"
               />
 
               <MetricCard
                 icon={<Database size={18} />}
                 label="Expenditure position"
-                value={
-                  expenditurePercentage ===
-                  null
-                    ? "Not available"
-                    : `${expenditurePercentage.toLocaleString(
-                        "en-IN",
-                      )}%`
-                }
+                value={<AnimatedNumber value={expenditurePercentage} format={(value) => `${value.toLocaleString("en-IN")}%`} />}
                 description="Share of latest cost"
               />
 
@@ -786,9 +762,7 @@ export default function ProjectDetailPage({
               <div className="nd-risk-stat">
                 <span>Risk score</span>
                 <strong>
-                  {risk.score == null
-                    ? "Not available"
-                    : risk.score}
+                  <AnimatedNumber value={numeric(risk.score)} format={(value) => value.toLocaleString("en-IN")} />
                 </strong>
                 <small>0–100 heuristic score</small>
               </div>
@@ -798,14 +772,7 @@ export default function ProjectDetailPage({
                 <strong>
                   {dataCoverage === null
                     ? "Not available"
-                    : `${(
-                        dataCoverage * 100
-                      ).toLocaleString(
-                        "en-IN",
-                        {
-                          maximumFractionDigits: 1,
-                        },
-                      )}%`}
+                    : <AnimatedNumber value={dataCoverage * 100} format={(value) => `${value.toLocaleString("en-IN", { maximumFractionDigits: 1 })}%`} />}
                 </strong>
                 <small>
                   {risk.confidence_label ||
@@ -1044,10 +1011,8 @@ export default function ProjectDetailPage({
                       </strong>
 
                       <span>
-                        Probability:{" "}
-                        {probabilityLabel(
-                          costPrediction.probability,
-                        )}
+                        Probability{" "}
+                        <AnimatedNumber value={numeric(costPrediction.probability) === null ? null : numeric(costPrediction.probability)! * 100} format={(value) => `${value.toLocaleString("en-IN", { maximumFractionDigits: 1 })}%`} />
                       </span>
 
                     </div>
@@ -1165,10 +1130,8 @@ export default function ProjectDetailPage({
                       </strong>
 
                       <span>
-                        Probability:{" "}
-                        {probabilityLabel(
-                          schedulePrediction.probability,
-                        )}
+                        Probability{" "}
+                        <AnimatedNumber value={numeric(schedulePrediction.probability) === null ? null : numeric(schedulePrediction.probability)! * 100} format={(value) => `${value.toLocaleString("en-IN", { maximumFractionDigits: 1 })}%`} />
                       </span>
 
                     </div>
@@ -1248,21 +1211,21 @@ export default function ProjectDetailPage({
 
               <p className="nd-panel-label">REPORTED / DERIVED</p>
               <div className="nd-intelligence-grid">
-                <MetricCard icon={<Wallet size={18} />} label="Original cost" value={money(costIntelligence.original_cost)} description="Reported original cost" />
-                <MetricCard icon={<TrendingUp size={18} />} label="Current / revised cost" value={money(costIntelligence.revised_current_cost)} description="Latest reported cost" />
-                <MetricCard icon={<Wallet size={18} />} label="Expenditure" value={money(costIntelligence.expenditure)} description="Cumulative reported expenditure" />
-                <MetricCard icon={<TrendingUp size={18} />} label="Current cost overrun" value={money(costIntelligence.current_cost_overrun_amount)} description={costIntelligence.current_cost_overrun_percentage == null ? "Unavailable" : `${numeric(costIntelligence.current_cost_overrun_percentage)?.toLocaleString("en-IN", { maximumFractionDigits: 1 })}% of original cost`} />
-                <MetricCard icon={<Activity size={18} />} label="Overrun %" value={costIntelligence.current_cost_overrun_percentage == null ? "Not available" : `${numeric(costIntelligence.current_cost_overrun_percentage)?.toLocaleString("en-IN", { maximumFractionDigits: 1 })}%`} description="Current assessment" />
-                <MetricCard icon={<TrendingUp size={18} />} label="Above revised cost" value={money(costIntelligence.amount_above_revised_cost)} description={costIntelligence.expenditure_exceeds_revised_cost ? "Expenditure exceeds revised cost" : "Not applicable"} />
+                <MetricCard icon={<Wallet size={18} />} label="Original cost" value={<AnimatedNumber value={numeric(costIntelligence.original_cost)} format={(value) => money(value)} />} description="Reported original cost" />
+                <MetricCard icon={<TrendingUp size={18} />} label="Current / revised cost" value={<AnimatedNumber value={numeric(costIntelligence.revised_current_cost)} format={(value) => money(value)} />} description="Latest reported cost" />
+                <MetricCard icon={<Wallet size={18} />} label="Expenditure" value={<AnimatedNumber value={numeric(costIntelligence.expenditure)} format={(value) => money(value)} />} description="Cumulative reported expenditure" />
+                <MetricCard icon={<TrendingUp size={18} />} label="Current cost overrun" value={<AnimatedNumber value={numeric(costIntelligence.current_cost_overrun_amount)} format={(value) => money(value)} />} description={costIntelligence.current_cost_overrun_percentage == null ? "Unavailable" : `${numeric(costIntelligence.current_cost_overrun_percentage)?.toLocaleString("en-IN", { maximumFractionDigits: 1 })}% of original cost`} />
+                <MetricCard icon={<Activity size={18} />} label="Overrun %" value={<AnimatedNumber value={numeric(costIntelligence.current_cost_overrun_percentage)} format={(value) => `${value.toLocaleString("en-IN", { maximumFractionDigits: 1 })}%`} />} description="Current assessment" />
+                <MetricCard icon={<TrendingUp size={18} />} label="Above revised cost" value={<AnimatedNumber value={numeric(costIntelligence.amount_above_revised_cost)} format={(value) => money(value)} />} description={costIntelligence.expenditure_exceeds_revised_cost ? "Expenditure exceeds revised cost" : "Not applicable"} />
               </div>
 
               <p className="nd-panel-label">PREDICTED</p>
               <div className="nd-prediction-meta">
                 <span>Future reported cost revision: {costIntelligence.prediction.availability === "AVAILABLE" ? (costIntelligence.prediction.prediction ? "Revision indicated" : "No revision indicated") : "Insufficient data"}</span>
-                <span>Probability {probabilityLabel(costIntelligence.prediction.probability)}</span>
+                <span>Probability <AnimatedNumber value={numeric(costIntelligence.prediction.probability) === null ? null : numeric(costIntelligence.prediction.probability)! * 100} format={(value) => `${value.toLocaleString("en-IN", { maximumFractionDigits: 1 })}%`} /></span>
                 <span>Cutoff {costIntelligence.prediction.cutoff_reporting_period || "Not available"}</span>
                 <span>Model {costIntelligence.prediction.model_version || "Not available"}</span>
-                <span>Coverage {featureCoverage == null ? "Not available" : `${(featureCoverage * 100).toLocaleString("en-IN", { maximumFractionDigits: 1 })}%`}</span>
+                <span>Coverage <AnimatedNumber value={featureCoverage == null ? null : featureCoverage * 100} format={(value) => `${value.toLocaleString("en-IN", { maximumFractionDigits: 1 })}%`} /></span>
               </div>
               {costIntelligence.limitations.map((limitation) => (
                 <p className="nd-card-note" key={limitation}>{limitation}</p>
