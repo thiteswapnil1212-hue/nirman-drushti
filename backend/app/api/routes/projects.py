@@ -12,6 +12,7 @@ from app.schemas.warnings import EarlyWarning
 from app.schemas.cost_prediction import CostRevisionPrediction
 from app.schemas.schedule_prediction import ScheduleRevisionPrediction
 from app.schemas.actions import ProjectActionsResponse
+from app.schemas.assistant import AssistantRequest, AssistantResponse
 from app.services.projects import (
     DuplicateProjectCodeError,
     ProjectNotFoundError,
@@ -28,6 +29,7 @@ from app.services.cost_prediction import predict_project
 from app.services.schedule_prediction import predict_project as predict_schedule_project
 from app.services.project_actions import build_project_actions
 from app.services.cost_intelligence import build_cost_intelligence
+from app.services.assistant import answer_project_question
 
 
 router = APIRouter()
@@ -121,6 +123,16 @@ def read_project_actions(project_id: UUID, database: Session = Depends(get_db)) 
     try:
         return build_project_actions(database, project_id)
     except ProjectNotFoundError as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found") from error
+
+
+@router.post("/{project_id}/assistant", response_model=AssistantResponse)
+def ask_project_assistant(project_id: UUID, payload: AssistantRequest, database: Session = Depends(get_db)) -> AssistantResponse:
+    try:
+        return answer_project_question(database, project_id, payload.question)
+    except ProjectNotFoundError as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found") from error
+    except LookupError as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found") from error
 
 

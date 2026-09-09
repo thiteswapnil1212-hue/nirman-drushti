@@ -18,6 +18,8 @@ class Settings(BaseSettings):
         validation_alias="CORS_ORIGINS",
     )
     log_level: str = Field(default="INFO", validation_alias="LOG_LEVEL")
+    gemini_api_key: str | None = Field(default=None, validation_alias="GEMINI_API_KEY")
+    gemini_model: str = Field(default="gemini-2.5-pro", validation_alias="GEMINI_MODEL")
 
     model_config = SettingsConfigDict(
         env_file=".env",
