@@ -1,10 +1,12 @@
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.models.project import MilestoneStatus, ProjectStatus
+from app.schemas.cost_prediction import CostRevisionPrediction
 
 
 class ProjectBase(BaseModel):
@@ -174,6 +176,26 @@ class CostIntelligence(BaseModel):
     cumulative_expenditure: Decimal | None
     expenditure_percentage: Decimal | None
     historical_observations: list[CostHistoryResponse]
+
+
+class CostIntelligenceResponse(BaseModel):
+    project_id: UUID
+    availability: Literal["AVAILABLE", "INSUFFICIENT_DATA", "UNAVAILABLE"]
+    original_cost: Decimal | None
+    revised_current_cost: Decimal | None
+    expenditure: Decimal | None
+    current_cost_overrun_amount: Decimal | None
+    current_cost_overrun_percentage: Decimal | None
+    escalation_amount: Decimal | None
+    escalation_percentage: Decimal | None
+    expenditure_percentage: Decimal | None
+    amount_above_revised_cost: Decimal | None
+    expenditure_exceeds_revised_cost: bool | None
+    completion_cost_availability: Literal["AVAILABLE", "UNAVAILABLE"]
+    completion_cost_overrun_amount: Decimal | None
+    completion_cost_overrun_percentage: Decimal | None
+    prediction: "CostRevisionPrediction"
+    limitations: list[str]
 
 
 class ProgressIntelligence(BaseModel):

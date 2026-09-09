@@ -6,7 +6,12 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.models.project import ProjectStatus
-from app.schemas.project import ProjectCreate, ProjectHistoryResponse, ProjectPage, ProjectResponse, ProjectUpdate, ProjectIntelligenceResponse
+from app.schemas.project import ProjectCreate, ProjectHistoryResponse, ProjectPage, ProjectResponse, ProjectUpdate, ProjectIntelligenceResponse, CostIntelligenceResponse
+from app.schemas.risk import RiskAssessment
+from app.schemas.warnings import EarlyWarning
+from app.schemas.cost_prediction import CostRevisionPrediction
+from app.schemas.schedule_prediction import ScheduleRevisionPrediction
+from app.schemas.actions import ProjectActionsResponse
 from app.services.projects import (
     DuplicateProjectCodeError,
     ProjectNotFoundError,
@@ -17,6 +22,12 @@ from app.services.projects import (
     update_project,
     calculate_project_intelligence,
 )
+from app.services.risk import build_risk_assessment
+from app.services.warnings import build_project_warnings
+from app.services.cost_prediction import predict_project
+from app.services.schedule_prediction import predict_project as predict_schedule_project
+from app.services.project_actions import build_project_actions
+from app.services.cost_intelligence import build_cost_intelligence
 
 
 router = APIRouter()
@@ -61,6 +72,54 @@ def read_project_history(project_id: UUID, database: Session = Depends(get_db)) 
 def read_project_intelligence(project_id: UUID, database: Session = Depends(get_db)) -> ProjectIntelligenceResponse:
     try:
         return calculate_project_intelligence(database, project_id)
+    except ProjectNotFoundError as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found") from error
+
+
+@router.get("/{project_id}/risk", response_model=RiskAssessment)
+def read_project_risk(project_id: UUID, database: Session = Depends(get_db)) -> RiskAssessment:
+    try:
+        return build_risk_assessment(database, project_id)
+    except ProjectNotFoundError as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found") from error
+
+
+@router.get("/{project_id}/warnings", response_model=list[EarlyWarning])
+def read_project_warnings(project_id: UUID, database: Session = Depends(get_db)) -> list[EarlyWarning]:
+    try:
+        return build_project_warnings(database, project_id)
+    except ProjectNotFoundError as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found") from error
+
+
+@router.get("/{project_id}/prediction/cost", response_model=CostRevisionPrediction)
+def read_cost_revision_prediction(project_id: UUID, database: Session = Depends(get_db)) -> CostRevisionPrediction:
+    try:
+        return predict_project(database, project_id)
+    except LookupError as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found") from error
+
+
+@router.get("/{project_id}/cost-intelligence", response_model=CostIntelligenceResponse)
+def read_cost_intelligence(project_id: UUID, database: Session = Depends(get_db)) -> CostIntelligenceResponse:
+    try:
+        return build_cost_intelligence(database, project_id)
+    except LookupError as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found") from error
+
+
+@router.get("/{project_id}/prediction/schedule", response_model=ScheduleRevisionPrediction)
+def read_schedule_revision_prediction(project_id: UUID, database: Session = Depends(get_db)) -> ScheduleRevisionPrediction:
+    try:
+        return predict_schedule_project(database, project_id)
+    except LookupError as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found") from error
+
+
+@router.get("/{project_id}/actions", response_model=ProjectActionsResponse)
+def read_project_actions(project_id: UUID, database: Session = Depends(get_db)) -> ProjectActionsResponse:
+    try:
+        return build_project_actions(database, project_id)
     except ProjectNotFoundError as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found") from error
 

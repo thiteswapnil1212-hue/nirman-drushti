@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -35,19 +35,34 @@ def list_projects(
     state: str | None = None,
     implementing_agency: str | None = None,
 ) -> tuple[list[Project], int]:
+    def contains(column: object, value: str) -> object:
+        return column.ilike(f"%{value.strip()}%")
+
     filters = []
     if status is not None:
         filters.append(Project.status == status)
-    if sector is not None:
-        filters.append(Project.sector == sector)
-    if ministry is not None:
-        filters.append(Project.ministry == ministry)
-    if search is not None:
-        filters.append(Project.name.istartswith(search))
+    if sector is not None and sector.strip():
+        filters.append(contains(Project.sector, sector))
+    if ministry is not None and ministry.strip():
+        filters.append(contains(Project.ministry, ministry))
+    if search is not None and search.strip():
+        search_pattern = f"%{search.strip()}%"
+        filters.append(
+            or_(
+                Project.name.ilike(search_pattern),
+                Project.project_code.ilike(search_pattern),
+                Project.legacy_ocms_code.ilike(search_pattern),
+                Project.pmgid.ilike(search_pattern),
+                Project.implementing_agency.ilike(search_pattern),
+                Project.state.ilike(search_pattern),
+            )
+        )
     if state is not None:
-        filters.append(Project.state == state)
+        if state.strip():
+            filters.append(contains(Project.state, state))
     if implementing_agency is not None:
-        filters.append(Project.implementing_agency == implementing_agency)
+        if implementing_agency.strip():
+            filters.append(contains(Project.implementing_agency, implementing_agency))
 
     total = database.scalar(select(func.count(Project.id)).where(*filters)) or 0
     statement = (

@@ -8,6 +8,7 @@ from app.api.routes import projects as projects_route
 from app.db.session import get_db
 from app.main import app
 from app.models.project import CostHistory, ProgressHistory, Project
+from app.services.projects import list_projects
 
 
 client = TestClient(app)
@@ -53,6 +54,31 @@ def test_list_projects_forwards_search_and_filters(monkeypatch) -> None:
     assert response.status_code == 200
     assert response.json()["items"][0]["project_code"] == "P-1"
     assert captured == {"page": 2, "page_size": 1, "status": None, "sector": None, "ministry": None, "search": "Bridge", "state": "Maharashtra", "implementing_agency": "Roads Agency"}
+
+
+def test_project_state_and_agency_filters_are_case_insensitive_partial_matches() -> None:
+    statements = []
+
+    class Result:
+        def all(self):
+            return []
+
+    class Database:
+        def scalar(self, statement):
+            statements.append(statement)
+            return 0
+
+        def scalars(self, statement):
+            statements.append(statement)
+            return Result()
+
+    list_projects(Database(), page=1, page_size=20, search="bridge", state=" maharashtra ", implementing_agency=" roads ")
+    sql = str(statements[0].compile())
+
+    assert "lower(projects.state) LIKE lower(:state_1)" in sql
+    assert "lower(projects.implementing_agency) LIKE lower(:implementing_agency_1)" in sql
+    assert "lower(projects.name) LIKE lower(:name_1)" in sql
+    assert "lower(projects.project_code) LIKE lower(:project_code_1)" in sql
 
 
 def test_project_detail_returns_imported_fields(monkeypatch) -> None:
