@@ -2042,4 +2042,292 @@ button { cursor: pointer; }
   .nd-hbar-fill {
     opacity: 1;
   }
+}/* =========================================================
+   NIRMAN DRUSHTI — HEADER
+   ========================================================= */
+
+.nd-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  width: 100%;
+  background: rgba(252, 251, 248, 0.96);
+  border-bottom: 1px solid #dedad2;
+  backdrop-filter: blur(10px);
+}
+
+.nd-header-inner {
+  width: 100%;
+  max-width: 1600px;
+  min-height: 72px;
+  margin: 0 auto;
+  padding: 0 28px;
+
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+
+/* ---------------------------------------------------------
+   BRAND
+   --------------------------------------------------------- */
+
+.nd-brand {
+  flex: 0 0 auto;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+
+  color: #111111;
+  text-decoration: none;
+
+  min-width: 205px;
+}
+
+.nd-brand-mark {
+  width: 42px;
+  height: 42px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid #d8d4cc;
+}
+
+.nd-brand-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.nd-brand-copy {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.nd-brand-title {
+  font-family: "Newsreader", Georgia, serif;
+  font-size: 20px;
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.nd-brand-subtitle {
+  margin-top: 5px;
+
+  font-family: "Public Sans", Arial, sans-serif;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+
+  color: #77716a;
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------
+   NAVIGATION
+   --------------------------------------------------------- */
+
+.nd-navigation {
+  flex: 1 1 auto;
+  min-width: 0;
+
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+
+  overflow-x: auto;
+  overflow-y: hidden;
+
+  scrollbar-width: none;
+}
+
+.nd-navigation::-webkit-scrollbar {
+  display: none;
+}
+
+.nd-navigation-link {
+  position: relative;
+  flex: 0 0 auto;
+
+  display: inline-flex;
+  align-items: center;
+
+  min-height: 72px;
+  padding: 0 10px;
+
+  color: #5f5a54;
+  text-decoration: none;
+
+  font-family: "Public Sans", Arial, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.015em;
+
+  white-space: nowrap;
+
+  transition:
+    color 160ms ease,
+    background-color 160ms ease;
+}
+
+.nd-navigation-link:hover {
+  color: #111111;
+  background: #f5f2ec;
+}
+
+.nd-navigation-link[data-active="true"] {
+  color: #111111;
+  background: #f5f2ec;
+}
+
+.nd-navigation-link[data-active="true"]::after {
+  content: "";
+
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 0;
+
+  height: 2px;
+  background: #111111;
+}
+
+/* ---------------------------------------------------------
+   HEADER META
+   --------------------------------------------------------- */
+
+.nd-header-meta {
+  flex: 0 0 auto;
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  padding-left: 18px;
+  border-left: 1px solid #dedad2;
+}
+
+.nd-header-status {
+  width: 6px;
+  height: 6px;
+
+  display: block;
+
+  background: #3b7a57;
+}
+
+.nd-header-note {
+  font-family: "Public Sans", Arial, sans-serif;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+
+  color: #77716a;
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------
+   RESPONSIVE
+   --------------------------------------------------------- */
+
+@media (max-width: 1280px) {
+  .nd-header-inner {
+    padding: 0 20px;
+    gap: 18px;
+  }
+
+  .nd-brand {
+    min-width: 190px;
+  }
+
+  .nd-navigation-link {
+    padding: 0 8px;
+    font-size: 10px;
+  }
+
+  .nd-header-meta {
+    padding-left: 12px;
+  }
+}
+
+@media (max-width: 900px) {
+  .nd-header-inner {
+    min-height: 64px;
+    padding: 0 16px;
+    gap: 14px;
+  }
+
+  .nd-brand {
+    min-width: auto;
+  }
+
+  .nd-brand-mark {
+    width: 38px;
+    height: 38px;
+  }
+
+  .nd-brand-title {
+    font-size: 18px;
+  }
+
+  .nd-brand-subtitle {
+    display: none;
+  }
+
+  .nd-navigation-link {
+    min-height: 64px;
+    padding: 0 8px;
+  }
+
+  .nd-header-meta {
+    display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .nd-header-inner {
+    padding: 0 12px;
+  }
+
+  .nd-brand-title {
+    font-size: 17px;
+  }
+
+  .nd-brand-mark {
+    width: 36px;
+    height: 36px;
+  }
+
+  .nd-navigation {
+    gap: 0;
+  }
+
+  .nd-navigation-link {
+    font-size: 10px;
+    padding: 0 7px;
+  }
+}
+
+/* ---------------------------------------------------------
+   REDUCED MOTION
+   --------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .nd-navigation-link {
+    transition: none;
+  }
 }

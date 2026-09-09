@@ -641,6 +641,35 @@ export interface ApiProjectActionsResponse {
   action_count: number;
 }
 
+export interface ApiProjectAssistantResponse {
+  project_id: string;
+  answer: string;
+  key_points: string[];
+  evidence_used: string[];
+  data_limitations: string[];
+  model: string;
+  grounded: boolean;
+}
+
+export function askProjectAssistant(
+  projectId: string,
+  question: string,
+  options?: RequestInit,
+): Promise<ApiProjectAssistantResponse> {
+  return apiRequest<ApiProjectAssistantResponse>(
+    `/api/v1/projects/${encodeURIComponent(projectId)}/assistant`,
+    {
+      ...options,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(options?.headers ?? {}),
+      },
+      body: JSON.stringify({ question }),
+    },
+  );
+}
+
 export function getProjectActions(projectId: string, options?: RequestInit): Promise<ApiProjectActionsResponse> {
   return apiRequest<ApiProjectActionsResponse>(`/api/v1/projects/${encodeURIComponent(projectId)}/actions`, { ...PROJECT_FETCH_OPTIONS, ...options });
 }

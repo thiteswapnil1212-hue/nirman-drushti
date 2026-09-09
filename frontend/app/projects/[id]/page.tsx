@@ -8,6 +8,8 @@ import {
   CalendarDays,
   CheckCircle2,
   Database,
+  MessageCircle,
+  Send,
   ShieldAlert,
   TrendingUp,
   Wallet,
@@ -24,6 +26,7 @@ import {
   getCostRevisionPrediction,
   getScheduleRevisionPrediction,
   getProjectActions,
+  askProjectAssistant,
   type ApiProject,
   type ApiProjectHistory,
   type ApiProjectIntelligence,
@@ -33,6 +36,7 @@ import {
   type ApiCostRevisionPrediction,
   type ApiScheduleRevisionPrediction,
   type ApiProjectAction,
+  type ApiProjectAssistantResponse,
 } from "@/lib/api";
 import { AnimatedNumber } from "@/components/AnimatedNumber";
 
@@ -178,11 +182,42 @@ export default function ProjectDetailPage({
     useState<ApiScheduleRevisionPrediction | null>(null);
   const [actions, setActions] =
     useState<ApiProjectAction[]>([]);
+  const [assistantQuestion, setAssistantQuestion] =
+    useState("");
+  const [assistantResponse, setAssistantResponse] =
+    useState<ApiProjectAssistantResponse | null>(null);
+  const [assistantLoading, setAssistantLoading] =
+    useState(false);
+  const [assistantError, setAssistantError] =
+    useState<string | null>(null);
 
   const [error, setError] =
     useState<string | null>(null);
 
   const [loading, setLoading] = useState(true);
+
+  const suggestedQuestions = [
+    "Why is this project risky?",
+    "What are the main warnings?",
+    "What may happen next?",
+    "What should be reviewed first?",
+  ];
+
+  const askAssistant = async (question = assistantQuestion) => {
+    const trimmedQuestion = question.trim();
+    if (!trimmedQuestion || !project) return;
+    setAssistantLoading(true);
+    setAssistantError(null);
+    setAssistantQuestion(trimmedQuestion);
+    try {
+      const response = await askProjectAssistant(project.id, trimmedQuestion);
+      setAssistantResponse(response);
+    } catch (reason) {
+      setAssistantError(reason instanceof Error ? reason.message : "The project assistant is unavailable.");
+    } finally {
+      setAssistantLoading(false);
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -1442,6 +1477,94 @@ export default function ProjectDetailPage({
               </div>
             )}
 
+          </div>
+        </section>
+
+        {/* =========================================================
+            PROJECT INTELLIGENCE ASSISTANT
+        ========================================================= */}
+
+        <section className="nd-section nd-section-soft">
+          <div className="nd-container">
+            <SectionHeading
+              number="08"
+              title="Project intelligence assistant"
+              description="Answers grounded only in this project's verified dossier data."
+            />
+
+            <div className="nd-prediction-card nd-assistant-panel">
+              <div className="nd-card-header">
+                <div>
+                  <span>Project intelligence assistant</span>
+                  <h3>Ask about this project</h3>
+                </div>
+                <MessageCircle size={19} />
+              </div>
+
+              <div className="nd-assistant-suggestions">
+                {suggestedQuestions.map((question) => (
+                  <button
+                    type="button"
+                    className="nd-secondary-button"
+                    key={question}
+                    onClick={() => {
+                      setAssistantQuestion(question);
+                      void askAssistant(question);
+                    }}
+                    disabled={assistantLoading}
+                  >
+                    {question}
+                  </button>
+                ))}
+              </div>
+
+              <form
+                className="nd-assistant-form"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void askAssistant();
+                }}
+              >
+                <input
+                  className="nd-input"
+                  value={assistantQuestion}
+                  onChange={(event) => setAssistantQuestion(event.target.value)}
+                  placeholder="Ask a project-specific question"
+                  maxLength={2000}
+                  disabled={assistantLoading}
+                />
+                <button className="nd-primary-button" type="submit" disabled={assistantLoading || !assistantQuestion.trim()}>
+                  <Send size={15} />
+                  {assistantLoading ? "Reviewing..." : "Ask"}
+                </button>
+              </form>
+
+              {assistantError && <p className="nd-card-note">{assistantError}</p>}
+              {assistantResponse && (
+                <div className="nd-assistant-response">
+                  <p className="nd-panel-label">ANSWER</p>
+                  <p>{assistantResponse.answer}</p>
+                  {assistantResponse.key_points.length > 0 && (
+                    <>
+                      <p className="nd-panel-label">KEY POINTS</p>
+                      <ul>
+                        {assistantResponse.key_points.map((point) => <li key={point}>{point}</li>)}
+                      </ul>
+                    </>
+                  )}
+                  <p className="nd-panel-label">EVIDENCE USED</p>
+                  {assistantResponse.evidence_used.length > 0 ? (
+                    <ul>{assistantResponse.evidence_used.map((item) => <li key={item}>{item}</li>)}</ul>
+                  ) : <p>This information is not available in the current project data.</p>}
+                  {assistantResponse.data_limitations.length > 0 && (
+                    <>
+                      <p className="nd-panel-label">DATA LIMITATIONS</p>
+                      <ul>{assistantResponse.data_limitations.map((item) => <li key={item}>{item}</li>)}</ul>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </section>
 
