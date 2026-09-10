@@ -1,3 +1,4 @@
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -14,7 +15,18 @@ class AssistantAnswer(BaseModel):
     data_limitations: list[str]
 
 
+AssistantStatus = Literal[
+    "success",
+    "provider_unavailable",
+    "provider_quota_exhausted",
+    "provider_configuration_error",
+    "invalid_provider_response",
+    "project_data_unavailable",
+]
+
+
 class AssistantResponse(AssistantAnswer):
     project_id: UUID
     model: str
     grounded: bool
+    status: AssistantStatus

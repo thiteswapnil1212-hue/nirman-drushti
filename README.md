@@ -124,6 +124,10 @@ GET /api/v1/projects
 GET /api/v1/projects/{project_id}
 GET /api/v1/projects/{project_id}/history
 GET /api/v1/projects/{project_id}/intelligence
+GET /api/v1/projects/{project_id}/risk
+GET /api/v1/projects/{project_id}/warnings
+GET /api/v1/risk/summary
+GET /api/v1/warnings
 ```
 
 ## Cost Intelligence
@@ -141,6 +145,31 @@ Historical Cost Observations
 ```
 
 These are derived statistics, not ML predictions.
+
+## Operational Risk and Early Warnings
+
+The risk and warning services use transparent initial operational heuristics
+from reported project and history fields. They are not statistically
+calibrated predictions and do not use ML, probabilities, SHAP, or causal
+inference.
+
+Risk contributions are bounded as follows:
+
+-   Cost pressure: 0--40 points. Escalation thresholds are 5%, 15%, and 30%.
+-   Schedule pressure: 0--30 points. Extension thresholds are 0%, 10%, and 25% of planned duration.
+-   Progress pressure: 0--20 points. Expenditure-progress divergence thresholds are 10, 25, and 40 percentage points; a slowing trend contributes 5 points.
+
+The total operational score is the sum of available contributions and is
+classified as LOW (0--20), MODERATE (21--50), HIGH (51--75), or CRITICAL
+(76--100). Missing inputs are never replaced with zero. Data coverage is a
+separate ratio of required reported inputs that exist, and incomplete coverage
+produces an incomplete assessment rather than an implied risk value.
+
+Warnings are deterministic notices for cost escalation, schedule extension,
+expenditure-progress divergence, progress slowdown when sufficient history
+exists, and data quality. Warning evidence is labelled REPORTED, DERIVED, or
+DATA QUALITY. No warning asserts a cause, misuse, inefficiency, probability,
+or prediction.
 
 ## Data Classification
 
@@ -181,6 +210,8 @@ backend\.venv\Scripts\python.exe -m pytest -q
 -   [x] Intelligence API
 -   [x] Deterministic cost intelligence
 -   [x] Cost intelligence tests
+-   [x] Rule-based operational risk assessment
+-   [x] Evidence-backed early warning service
 
 ### In Progress
 
@@ -194,11 +225,14 @@ backend\.venv\Scripts\python.exe -m pytest -q
 -   [ ] Cost-overrun model
 -   [ ] Time-overrun model
 -   [ ] SHAP
--   [ ] Early warnings
--   [ ] Portfolio analytics
+-   [x] Early warnings
+-   [x] Portfolio analytics
 -   [ ] Benchmarking
 -   [ ] What-if analysis
 -   [ ] Optional LLM assistant
+
+Risk thresholds are initial operational heuristics and should be calibrated
+against validated outcomes only during a later ML/statistical phase.
 
 ## Disclaimer
 
