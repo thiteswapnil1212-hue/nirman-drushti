@@ -8,7 +8,7 @@
  */
 
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+  process.env.NEXT_PUBLIC_API_URL ?? "https://nirman-drushti-api.onrender.com";
 
 /**
  * Performs a typed HTTP request against the backend API.

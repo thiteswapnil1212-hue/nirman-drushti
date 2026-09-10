@@ -14,7 +14,7 @@ class Settings(BaseSettings):
         validation_alias="DATABASE_URL",
     )
     cors_origins: str = Field(
-        default="http://localhost:3000,http://127.0.0.1:3000",
+        default="http://localhost:3000,http://127.0.0.1:3000,https://frontend-pearl-delta-28.vercel.app",
         validation_alias="CORS_ORIGINS",
     )
     log_level: str = Field(default="INFO", validation_alias="LOG_LEVEL")
