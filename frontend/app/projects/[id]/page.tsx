@@ -58,6 +58,29 @@ const percent = (value: string | number | null | undefined) => {
     : `${parsed.toLocaleString("en-IN")}%`;
 };
 
+const assistantStatusMessage = (response: ApiProjectAssistantResponse) => {
+  if (response.status === "project_data_unavailable") {
+    return "This information is not available in the current project data.";
+  }
+
+  if (
+    response.status === "provider_unavailable" &&
+    response.answer === "Drushti AI is not configured on the backend."
+  ) {
+    return "Drushti AI is not configured on the backend.";
+  }
+
+  if (response.status === "provider_quota_exhausted") {
+    return "Drushti AI is temporarily unavailable because the configured AI provider has reached its usage limit.";
+  }
+
+  if (response.status === "provider_configuration_error") {
+    return "Drushti AI is not configured on the backend.";
+  }
+
+  return "Drushti AI could not complete the request. Please try again.";
+};
+
 const dateLabel = (value: string | null | undefined) => {
   if (!value) return "Not available";
 
@@ -195,6 +218,8 @@ export default function ProjectDetailPage({
     useRef<HTMLDivElement>(null);
   const assistantInputRef =
     useRef<HTMLInputElement>(null);
+  const assistantRequestInFlightRef =
+    useRef(false);
 
   const [error, setError] =
     useState<string | null>(null);
@@ -210,16 +235,19 @@ export default function ProjectDetailPage({
 
   const askAssistant = async (question = assistantQuestion) => {
     const trimmedQuestion = question.trim();
-    if (!trimmedQuestion || !project) return;
+    if (!trimmedQuestion || !project || assistantRequestInFlightRef.current) return;
+    assistantRequestInFlightRef.current = true;
     setAssistantLoading(true);
     setAssistantError(null);
+    setAssistantResponse(null);
     setAssistantQuestion(trimmedQuestion);
     try {
       const response = await askProjectAssistant(project.id, trimmedQuestion);
       setAssistantResponse(response);
-    } catch (reason) {
-      setAssistantError(reason instanceof Error ? reason.message : "The project assistant is unavailable.");
+    } catch {
+      setAssistantError("Drushti AI could not complete the request. Please try again.");
     } finally {
+      assistantRequestInFlightRef.current = false;
       setAssistantLoading(false);
     }
   };
@@ -2017,6 +2045,7 @@ export default function ProjectDetailPage({
               <div>
                 <span className="nd-panel-label">DRUSHTI AI</span>
                 <h2 id="drushti-ai-title">Project Intelligence Assistant</h2>
+                <p className="nd-assistant-subtitle">Ask about this project&apos;s data, risks and warnings.</p>
               </div>
               <button
                 type="button"
@@ -2073,7 +2102,7 @@ export default function ProjectDetailPage({
               {assistantLoading && (
                 <div className="nd-assistant-loading" role="status" aria-live="polite">
                   <span className="nd-loading-spinner" />
-                  Reviewing verified project data...
+                  Analysing project data
                 </div>
               )}
 
@@ -2086,16 +2115,22 @@ export default function ProjectDetailPage({
 
               {assistantResponse && !assistantLoading && (
                 <div className="nd-assistant-response">
-                  {!assistantResponse.grounded ? (
+                  {assistantResponse.status !== "success" ? (
                     <div className="nd-assistant-unavailable">
-                      <strong>Assistant unavailable</strong>
-                      <p>{assistantResponse.answer}</p>
-                      {assistantResponse.data_limitations.map((item) => <p key={item}>{item}</p>)}
+                      <strong>
+                        {assistantResponse.status === "project_data_unavailable"
+                          ? "Project data unavailable"
+                          : "Assistant unavailable"}
+                      </strong>
+                      <p>{assistantStatusMessage(assistantResponse)}</p>
+                      {assistantResponse.data_limitations
+                        .filter((item) => item !== assistantStatusMessage(assistantResponse))
+                        .map((item) => <p key={item}>{item}</p>)}
                     </div>
                   ) : (
                     <>
                       <p className="nd-panel-label">ANSWER</p>
-                      <p>{assistantResponse.answer}</p>
+                      <p className="nd-assistant-answer">{assistantResponse.answer}</p>
                       {assistantResponse.key_points.length > 0 && (
                         <>
                           <p className="nd-panel-label">KEY POINTS</p>
@@ -2346,6 +2381,13 @@ const styles = `
     font-weight: 600;
   }
 
+  .nd-assistant-subtitle {
+    margin: 5px 0 0;
+    color: #756b62;
+    font-size: 11px;
+    line-height: 1.45;
+  }
+
   .nd-panel-label {
     margin: 0;
     color: #a4562b;
@@ -2479,6 +2521,11 @@ const styles = `
   .nd-assistant-response ul {
     margin: 7px 0 16px;
     padding-left: 18px;
+  }
+
+  .nd-assistant-answer {
+    white-space: pre-line;
+    line-height: 1.7;
   }
 
   .nd-assistant-response .nd-panel-label:not(:first-child) {

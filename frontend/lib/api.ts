@@ -649,6 +649,13 @@ export interface ApiProjectAssistantResponse {
   data_limitations: string[];
   model: string;
   grounded: boolean;
+  status:
+    | "success"
+    | "provider_unavailable"
+    | "provider_quota_exhausted"
+    | "provider_configuration_error"
+    | "invalid_provider_response"
+    | "project_data_unavailable";
 }
 
 export function askProjectAssistant(
