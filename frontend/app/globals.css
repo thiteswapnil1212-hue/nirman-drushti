@@ -4688,4 +4688,76 @@ button { cursor: pointer; }
   .nd-home-flow-item {
     transition: none;
   }
+}/* =========================================================
+   DRUSHTI AI — SQUARE ICON ATTENTION PULSE
+========================================================= */
+
+.nd-header-ai-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  animation: drushti-ai-pulse 2.4s ease-in-out infinite;
+}
+
+.nd-header-ai-button::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border: 1px solid currentColor;
+  border-radius: 8px;
+  opacity: 0;
+  pointer-events: none;
+  animation: drushti-ai-ring 2.4s ease-out infinite;
+}
+
+@keyframes drushti-ai-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.78;
+    transform: scale(0.97);
+  }
+}
+
+@keyframes drushti-ai-ring {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  20% {
+    opacity: 0.35;
+  }
+
+  70% {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+}
+
+/* Inactive DRUSHTI AI remains static */
+.nd-header-ai-inactive {
+  animation: none;
+}
+
+.nd-header-ai-inactive::after {
+  animation: none;
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .nd-header-ai-button,
+  .nd-header-ai-button::after {
+    animation: none;
+  }
 }

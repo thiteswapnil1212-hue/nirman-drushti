@@ -9,12 +9,12 @@ const monitoringStages = [
   {
     number: "02",
     title: "Monitoring",
-    description: "Cost, progress and schedule",
+    description: "Cost · progress · schedule",
   },
   {
     number: "03",
-    title: "Analysis",
-    description: "Observed project changes",
+    title: "Intelligence",
+    description: "Changes · drivers · predictive signals",
   },
   {
     number: "04",
@@ -24,40 +24,63 @@ const monitoringStages = [
   {
     number: "05",
     title: "Action",
-    description: "Review and intervention",
+    description: "Officer review · intervention",
+  },
+];
+
+const intelligenceQuestions = [
+  {
+    number: "01",
+    title: "What changed?",
+    description:
+      "Cost, progress and schedule changes across reporting periods.",
+  },
+  {
+    number: "02",
+    title: "Why does it matter?",
+    description:
+      "Risk signals and factors associated with observed project behaviour.",
+  },
+  {
+    number: "03",
+    title: "What may happen next?",
+    description:
+      "Future reported cost or schedule revision likelihood.",
+  },
+  {
+    number: "04",
+    title: "What should the officer review?",
+    description:
+      "Projects and signals requiring monitoring attention.",
   },
 ];
 
 export default function HomePage() {
   return (
     <main className="nd-home">
-
       {/* =====================================================
           HERO
       ===================================================== */}
 
       <section className="nd-home-hero">
         <div className="nd-container nd-home-hero-grid">
-
-          {/* -------------------------------------------------
-              LEFT — HERO CONTENT
-          ------------------------------------------------- */}
+          {/* LEFT — HERO CONTENT */}
 
           <div className="nd-home-hero-content">
-
             <p className="nd-home-eyebrow">
               Central infrastructure monitoring
             </p>
 
             <h1 className="nd-home-title">
-              Monitor projects.
+              From project data
               <br />
-              <span>Prioritize attention.</span>
+              <span>to actionable intelligence.</span>
             </h1>
 
             <p className="nd-home-description">
-              Cost, progress and schedule monitoring for major
-              infrastructure projects.
+              Nirman Drushti analyses project reporting data to surface cost,
+              progress and schedule signals, identify risk, and support timely
+              officer review.
             </p>
 
             <div className="nd-home-actions">
@@ -65,49 +88,44 @@ export default function HomePage() {
                 href="/projects"
                 className="nd-home-button nd-home-button-primary"
               >
-                Open project register
+                Explore Projects
                 <span aria-hidden="true">→</span>
               </Link>
 
               <Link
-                href="/data"
+                href="/projects"
                 className="nd-home-button nd-home-button-secondary"
               >
-                Data sources
+                View Risk Intelligence
               </Link>
             </div>
 
             <div className="nd-home-reference">
               <span>ND / 01</span>
-              <span>PROJECT MONITORING</span>
+              <span>PROJECT INTELLIGENCE</span>
             </div>
           </div>
 
-
-          {/* -------------------------------------------------
-              RIGHT — PROJECT INTELLIGENCE DIAGRAM
-          ------------------------------------------------- */}
+          {/* RIGHT — PROJECT INTELLIGENCE DIAGRAM */}
 
           <div className="nd-home-diagram">
-
             <div className="nd-home-diagram-header">
               <div>
                 <span>PROJECT INTELLIGENCE</span>
-                <strong>Monitoring flow</strong>
+                <strong>From reporting to action</strong>
               </div>
 
-              <div className="nd-home-register-status">
+              <div
+                className="nd-home-register-status"
+                aria-label="Project register status"
+              >
                 <i />
                 REGISTER
               </div>
             </div>
 
-
             <div className="nd-home-tree">
-
-              {/* ===========================================
-                  CONNECTION LINES
-              =========================================== */}
+              {/* CONNECTION LINES */}
 
               <svg
                 className="nd-home-tree-svg"
@@ -115,14 +133,10 @@ export default function HomePage() {
                 preserveAspectRatio="none"
                 aria-hidden="true"
               >
-                {/* Project → observation */}
-
                 <path
                   className="nd-tree-connection"
                   d="M320 72 V128"
                 />
-
-                {/* Observation branches */}
 
                 <path
                   className="nd-tree-connection"
@@ -134,8 +148,6 @@ export default function HomePage() {
                   d="M320 128 H480 V192"
                 />
 
-                {/* Observation → analysis */}
-
                 <path
                   className="nd-tree-connection"
                   d="M160 192 V245 H320"
@@ -146,14 +158,10 @@ export default function HomePage() {
                   d="M480 192 V245 H320"
                 />
 
-                {/* Analysis → risk */}
-
                 <path
                   className="nd-tree-connection"
                   d="M320 245 V315"
                 />
-
-                {/* Risk → action */}
 
                 <path
                   className="nd-tree-connection"
@@ -164,8 +172,6 @@ export default function HomePage() {
                   className="nd-tree-connection"
                   d="M320 375 H460 V445"
                 />
-
-                {/* Moving signal */}
 
                 <circle
                   className="nd-tree-flow-dot nd-tree-flow-dot-one"
@@ -178,288 +184,229 @@ export default function HomePage() {
                 />
               </svg>
 
-
-              {/* ===========================================
-                  PROJECT
-              =========================================== */}
+              {/* 01 — PROJECT */}
 
               <article className="nd-tree-card nd-tree-card-project">
-
-                <span className="nd-tree-number">
-                  01
-                </span>
+                <span className="nd-tree-number">01</span>
 
                 <div className="nd-tree-card-content">
-                  <small>INPUT</small>
+                  <small>PROJECT</small>
 
-                  <strong>
-                    Project record
-                  </strong>
+                  <strong>Project record</strong>
 
-                  <p>
-                    Project details and reporting history
-                  </p>
+                  <p>Project details and reporting history</p>
                 </div>
 
                 <span className="nd-tree-node nd-tree-node-green" />
               </article>
 
-
-              {/* ===========================================
-                  OBSERVATIONS
-              =========================================== */}
+              {/* 02 / 03 — MONITORING */}
 
               <div className="nd-tree-observations">
-
                 <article className="nd-tree-card nd-tree-card-small">
-
-                  <span className="nd-tree-number">
-                    02
-                  </span>
+                  <span className="nd-tree-number">02</span>
 
                   <div className="nd-tree-card-content">
-                    <small>OBSERVATION</small>
+                    <small>COST</small>
 
-                    <strong>
-                      Cost
-                    </strong>
+                    <strong>Cost &amp; expenditure</strong>
 
-                    <p>
-                      Cost and expenditure
-                    </p>
+                    <p>Reported cost and expenditure changes</p>
                   </div>
 
                   <span className="nd-tree-node" />
                 </article>
 
-
                 <article className="nd-tree-card nd-tree-card-small">
-
-                  <span className="nd-tree-number">
-                    03
-                  </span>
+                  <span className="nd-tree-number">03</span>
 
                   <div className="nd-tree-card-content">
-                    <small>OBSERVATION</small>
+                    <small>PROGRESS</small>
 
-                    <strong>
-                      Progress
-                    </strong>
+                    <strong>Physical progress</strong>
 
-                    <p>
-                      Delivery and milestones
-                    </p>
+                    <p>Reported progress behaviour</p>
                   </div>
 
                   <span className="nd-tree-node" />
                 </article>
-
               </div>
 
-
-              {/* ===========================================
-                  ANALYSIS
-              =========================================== */}
+              {/* 04 — SCHEDULE / ANALYSIS */}
 
               <article className="nd-tree-card nd-tree-card-analysis">
-
-                <span className="nd-tree-number">
-                  04
-                </span>
+                <span className="nd-tree-number">04</span>
 
                 <div className="nd-tree-card-content">
-                  <small>ANALYSIS</small>
+                  <small>SCHEDULE</small>
 
-                  <strong>
-                    Project analysis
-                  </strong>
+                  <strong>Completion changes</strong>
 
-                  <p>
-                    Changes across reporting periods
-                  </p>
+                  <p>Reported completion and schedule changes</p>
                 </div>
 
                 <span className="nd-tree-node nd-tree-node-green" />
               </article>
 
-
-              {/* ===========================================
-                  RISK
-              =========================================== */}
+              {/* 05 — ANALYSE */}
 
               <article className="nd-tree-card nd-tree-card-risk">
-
-                <span className="nd-tree-number">
-                  05
-                </span>
+                <span className="nd-tree-number">05</span>
 
                 <div className="nd-tree-card-content">
-                  <small>ATTENTION</small>
+                  <small>ANALYSE</small>
 
-                  <strong>
-                    Risk
-                  </strong>
+                  <strong>Project intelligence</strong>
 
-                  <p>
-                    Cost · time · implementation
-                  </p>
+                  <p>Changes, trends and associated drivers</p>
                 </div>
 
                 <span className="nd-tree-node nd-tree-node-warning" />
               </article>
 
-
-              {/* ===========================================
-                  ACTIONS
-              =========================================== */}
+              {/* 06 / 07 — RISK + ACTION */}
 
               <div className="nd-tree-actions">
-
                 <article className="nd-tree-card nd-tree-card-action">
-
-                  <span className="nd-tree-number">
-                    06
-                  </span>
+                  <span className="nd-tree-number">06</span>
 
                   <div className="nd-tree-card-content">
-                    <small>REVIEW</small>
+                    <small>RISK</small>
 
-                    <strong>
-                      Verify
-                    </strong>
+                    <strong>Risk intelligence</strong>
 
-                    <p>
-                      Officer review
-                    </p>
-                  </div>
-
-                  <span className="nd-tree-node" />
-                </article>
-
-
-                <article className="nd-tree-card nd-tree-card-action">
-
-                  <span className="nd-tree-number">
-                    07
-                  </span>
-
-                  <div className="nd-tree-card-content">
-                    <small>RESPONSE</small>
-
-                    <strong>
-                      Act
-                    </strong>
-
-                    <p>
-                      Intervention
-                    </p>
+                    <p>Cost · time · implementation</p>
                   </div>
 
                   <span className="nd-tree-node nd-tree-node-warning" />
                 </article>
 
+                <article className="nd-tree-card nd-tree-card-action">
+                  <span className="nd-tree-number">07</span>
+
+                  <div className="nd-tree-card-content">
+                    <small>ACTION</small>
+
+                    <strong>Officer review</strong>
+
+                    <p>Evidence-based intervention</p>
+                  </div>
+
+                  <span className="nd-tree-node nd-tree-node-warning" />
+                </article>
               </div>
-
             </div>
-
 
             <div className="nd-home-diagram-footer">
               <span>
-                DATA → MONITORING → ANALYSIS → WARNING → ACTION
+                DATA → MONITOR → ANALYSE → PREDICT → EXPLAIN → WARN → ACT
               </span>
 
-              <span>
-                ND / 01
-              </span>
+              <span>ND / 01</span>
             </div>
-
           </div>
-
         </div>
       </section>
 
-
       {/* =====================================================
-          PLATFORM FLOW
+          INTELLIGENCE QUESTIONS
       ===================================================== */}
 
-      <section className="nd-home-flow-section">
-
+      <section className="nd-home-intelligence-section">
         <div className="nd-container">
-
-          <div className="nd-home-section-heading">
-
+          <div className="nd-home-section-heading nd-home-section-heading-intelligence">
             <div>
-              <p className="nd-home-eyebrow">
-                Monitoring framework
-              </p>
+              <p className="nd-home-eyebrow">Project intelligence</p>
 
               <h2>
-                From project record
+                Questions that
                 <br />
-                to action.
+                support review.
               </h2>
             </div>
 
             <p>
-              The platform keeps project observations visible while
-              analysis and attention signals are derived from available
-              reporting data.
+              Nirman Drushti turns changes in project reporting into concise
+              intelligence for monitoring and officer review.
             </p>
-
           </div>
 
+          <div className="nd-home-questions">
+            {intelligenceQuestions.map((question) => (
+              <article
+                key={question.number}
+                className="nd-home-question"
+              >
+                <span className="nd-home-question-number">
+                  {question.number}
+                </span>
+
+                <div>
+                  <h3>{question.title}</h3>
+
+                  <p>{question.description}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* =====================================================
+          MONITORING FRAMEWORK
+      ===================================================== */}
+
+      <section className="nd-home-flow-section">
+        <div className="nd-container">
+          <div className="nd-home-section-heading">
+            <div>
+              <p className="nd-home-eyebrow">Monitoring framework</p>
+
+              <h2>
+                From project record
+                <br />
+                to actionable intelligence.
+              </h2>
+            </div>
+
+            <p>
+              Nirman Drushti analyses changes across project reporting periods
+              to identify cost, progress and schedule signals, estimate future
+              reported revisions, and surface projects requiring officer
+              review.
+            </p>
+          </div>
 
           <div className="nd-home-flow">
-
             {monitoringStages.map((stage) => (
               <article
                 key={stage.number}
                 className="nd-home-flow-item"
               >
-                <span>
-                  {stage.number}
-                </span>
+                <span>{stage.number}</span>
 
                 <div>
-                  <strong>
-                    {stage.title}
-                  </strong>
+                  <strong>{stage.title}</strong>
 
-                  <p>
-                    {stage.description}
-                  </p>
+                  <p>{stage.description}</p>
                 </div>
               </article>
             ))}
-
           </div>
-
         </div>
-
       </section>
-
 
       {/* =====================================================
           FOOTER STATEMENT
       ===================================================== */}
 
       <section className="nd-home-footer-strip">
-
         <div className="nd-container">
+          <span>NIRMAN DRUSHTI</span>
 
-          <span>
-            NIRMAN DRUSHTI
-          </span>
-
-          <strong>
-            Infrastructure project monitoring
-          </strong>
-
+          <strong>Infrastructure project monitoring</strong>
         </div>
-
       </section>
-
     </main>
   );
 }

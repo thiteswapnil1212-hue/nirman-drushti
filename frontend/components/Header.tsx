@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useLayoutEffect, useRef } from "react";
 
 import logo from "@/components/4.png";
-import drushtiAiLogo from "@/components/Drushti AI logo icon.png";
+import drushtiAiLogo from "@/components/AI.png.png";
 
 const navigation = [
   ["/", "Home"],
