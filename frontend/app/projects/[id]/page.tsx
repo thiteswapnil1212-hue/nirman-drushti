@@ -8,13 +8,12 @@ import {
   CalendarDays,
   CheckCircle2,
   Database,
-  MessageCircle,
   Send,
   ShieldAlert,
   TrendingUp,
   Wallet,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   getProject,
@@ -190,6 +189,12 @@ export default function ProjectDetailPage({
     useState(false);
   const [assistantError, setAssistantError] =
     useState<string | null>(null);
+  const [assistantOpen, setAssistantOpen] =
+    useState(false);
+  const assistantDrawerRef =
+    useRef<HTMLDivElement>(null);
+  const assistantInputRef =
+    useRef<HTMLInputElement>(null);
 
   const [error, setError] =
     useState<string | null>(null);
@@ -198,9 +203,9 @@ export default function ProjectDetailPage({
 
   const suggestedQuestions = [
     "Why is this project risky?",
-    "What are the main warnings?",
-    "What may happen next?",
+    "What changed in this project?",
     "What should be reviewed first?",
+    "What are the main warnings?",
   ];
 
   const askAssistant = async (question = assistantQuestion) => {
@@ -218,6 +223,64 @@ export default function ProjectDetailPage({
       setAssistantLoading(false);
     }
   };
+
+  useEffect(() => {
+    const openFromHeader = (event: Event) => {
+      const requestedProjectId = (
+        event as CustomEvent<{ projectId?: string }>
+      ).detail?.projectId;
+      if (requestedProjectId && project && requestedProjectId !== project.id) {
+        return;
+      }
+      setAssistantOpen(true);
+    };
+    window.addEventListener("drushti-ai:open", openFromHeader);
+    return () => window.removeEventListener("drushti-ai:open", openFromHeader);
+  }, [project]);
+
+  useEffect(() => {
+    if (!assistantOpen) {
+      return;
+    }
+
+    const previousActiveElement = document.activeElement as HTMLElement | null;
+    const frame = window.requestAnimationFrame(() => assistantInputRef.current?.focus());
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setAssistantOpen(false);
+        return;
+      }
+      if (event.key !== "Tab" || !assistantDrawerRef.current) return;
+
+      const focusable = Array.from(
+        assistantDrawerRef.current.querySelectorAll<HTMLElement>(
+          "button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex='-1'])",
+        ),
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      previousActiveElement?.focus();
+    };
+  }, [assistantOpen]);
 
   useEffect(() => {
     let mounted = true;
@@ -395,7 +458,7 @@ export default function ProjectDetailPage({
     <>
       <style>{styles}</style>
 
-      <main className="nd-page">
+      <main className="nd-page" aria-hidden={assistantOpen}>
 
         {/* =========================================================
             HERO
@@ -404,13 +467,16 @@ export default function ProjectDetailPage({
         <section className="nd-project-hero">
           <div className="nd-container">
 
-            <Link
-              href="/projects"
-              className="nd-back-link"
-            >
-              <ArrowLeft size={15} />
-              Back to Project Register
-            </Link>
+            <div className="nd-dossier-header-actions">
+              <Link
+                href="/projects"
+                className="nd-back-link"
+              >
+                <ArrowLeft size={15} />
+                Back to Project Register
+              </Link>
+
+            </div>
 
             <div className="nd-hero-layout">
 
@@ -1481,94 +1547,6 @@ export default function ProjectDetailPage({
         </section>
 
         {/* =========================================================
-            PROJECT INTELLIGENCE ASSISTANT
-        ========================================================= */}
-
-        <section className="nd-section nd-section-soft">
-          <div className="nd-container">
-            <SectionHeading
-              number="08"
-              title="Project intelligence assistant"
-              description="Answers grounded only in this project's verified dossier data."
-            />
-
-            <div className="nd-prediction-card nd-assistant-panel">
-              <div className="nd-card-header">
-                <div>
-                  <span>Project intelligence assistant</span>
-                  <h3>Ask about this project</h3>
-                </div>
-                <MessageCircle size={19} />
-              </div>
-
-              <div className="nd-assistant-suggestions">
-                {suggestedQuestions.map((question) => (
-                  <button
-                    type="button"
-                    className="nd-secondary-button"
-                    key={question}
-                    onClick={() => {
-                      setAssistantQuestion(question);
-                      void askAssistant(question);
-                    }}
-                    disabled={assistantLoading}
-                  >
-                    {question}
-                  </button>
-                ))}
-              </div>
-
-              <form
-                className="nd-assistant-form"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  void askAssistant();
-                }}
-              >
-                <input
-                  className="nd-input"
-                  value={assistantQuestion}
-                  onChange={(event) => setAssistantQuestion(event.target.value)}
-                  placeholder="Ask a project-specific question"
-                  maxLength={2000}
-                  disabled={assistantLoading}
-                />
-                <button className="nd-primary-button" type="submit" disabled={assistantLoading || !assistantQuestion.trim()}>
-                  <Send size={15} />
-                  {assistantLoading ? "Reviewing..." : "Ask"}
-                </button>
-              </form>
-
-              {assistantError && <p className="nd-card-note">{assistantError}</p>}
-              {assistantResponse && (
-                <div className="nd-assistant-response">
-                  <p className="nd-panel-label">ANSWER</p>
-                  <p>{assistantResponse.answer}</p>
-                  {assistantResponse.key_points.length > 0 && (
-                    <>
-                      <p className="nd-panel-label">KEY POINTS</p>
-                      <ul>
-                        {assistantResponse.key_points.map((point) => <li key={point}>{point}</li>)}
-                      </ul>
-                    </>
-                  )}
-                  <p className="nd-panel-label">EVIDENCE USED</p>
-                  {assistantResponse.evidence_used.length > 0 ? (
-                    <ul>{assistantResponse.evidence_used.map((item) => <li key={item}>{item}</li>)}</ul>
-                  ) : <p>This information is not available in the current project data.</p>}
-                  {assistantResponse.data_limitations.length > 0 && (
-                    <>
-                      <p className="nd-panel-label">DATA LIMITATIONS</p>
-                      <ul>{assistantResponse.data_limitations.map((item) => <li key={item}>{item}</li>)}</ul>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
-
-        {/* =========================================================
             HISTORY
         ========================================================= */}
 
@@ -2018,6 +1996,130 @@ export default function ProjectDetailPage({
         </section>
 
       </main>
+
+      {assistantOpen && (
+        <>
+          <button
+            type="button"
+            className="nd-assistant-backdrop"
+            aria-label="Close Drushti AI assistant"
+            onClick={() => setAssistantOpen(false)}
+          />
+
+          <aside
+            ref={assistantDrawerRef}
+            className="nd-assistant-drawer"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="drushti-ai-title"
+          >
+            <div className="nd-assistant-drawer-header">
+              <div>
+                <span className="nd-panel-label">DRUSHTI AI</span>
+                <h2 id="drushti-ai-title">Project Intelligence Assistant</h2>
+              </div>
+              <button
+                type="button"
+                className="nd-icon-button"
+                aria-label="Close Drushti AI assistant"
+                onClick={() => setAssistantOpen(false)}
+              >
+                <span aria-hidden="true">×</span>
+              </button>
+            </div>
+
+            <div className="nd-assistant-drawer-body">
+              <div className="nd-assistant-suggestions">
+                {suggestedQuestions.map((question) => (
+                  <button
+                    type="button"
+                    className="nd-secondary-button"
+                    key={question}
+                    onClick={() => {
+                      setAssistantQuestion(question);
+                      void askAssistant(question);
+                    }}
+                    disabled={assistantLoading}
+                  >
+                    {question}
+                  </button>
+                ))}
+              </div>
+
+              <form
+                className="nd-assistant-form"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void askAssistant();
+                }}
+              >
+                <label className="nd-sr-only" htmlFor="drushti-ai-question">Ask a project-specific question</label>
+                <input
+                  ref={assistantInputRef}
+                  id="drushti-ai-question"
+                  className="nd-input"
+                  value={assistantQuestion}
+                  onChange={(event) => setAssistantQuestion(event.target.value)}
+                  placeholder="Ask a project-specific question"
+                  maxLength={2000}
+                  disabled={assistantLoading}
+                />
+                <button className="nd-primary-button" type="submit" disabled={assistantLoading || !assistantQuestion.trim()}>
+                  <Send size={15} />
+                  {assistantLoading ? "Reviewing..." : "Ask"}
+                </button>
+              </form>
+
+              {assistantLoading && (
+                <div className="nd-assistant-loading" role="status" aria-live="polite">
+                  <span className="nd-loading-spinner" />
+                  Reviewing verified project data...
+                </div>
+              )}
+
+              {assistantError && (
+                <div className="nd-assistant-unavailable" role="alert">
+                  <strong>Assistant unavailable</strong>
+                  <p>{assistantError}</p>
+                </div>
+              )}
+
+              {assistantResponse && !assistantLoading && (
+                <div className="nd-assistant-response">
+                  {!assistantResponse.grounded ? (
+                    <div className="nd-assistant-unavailable">
+                      <strong>Assistant unavailable</strong>
+                      <p>{assistantResponse.answer}</p>
+                      {assistantResponse.data_limitations.map((item) => <p key={item}>{item}</p>)}
+                    </div>
+                  ) : (
+                    <>
+                      <p className="nd-panel-label">ANSWER</p>
+                      <p>{assistantResponse.answer}</p>
+                      {assistantResponse.key_points.length > 0 && (
+                        <>
+                          <p className="nd-panel-label">KEY POINTS</p>
+                          <ul>{assistantResponse.key_points.map((point) => <li key={point}>{point}</li>)}</ul>
+                        </>
+                      )}
+                      <p className="nd-panel-label">EVIDENCE USED</p>
+                      {assistantResponse.evidence_used.length > 0 ? (
+                        <ul>{assistantResponse.evidence_used.map((item) => <li key={item}>{item}</li>)}</ul>
+                      ) : <p>This information is not available in the current project data.</p>}
+                      {assistantResponse.data_limitations.length > 0 && (
+                        <>
+                          <p className="nd-panel-label">DATA LIMITATIONS</p>
+                          <ul>{assistantResponse.data_limitations.map((item) => <li key={item}>{item}</li>)}</ul>
+                        </>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </aside>
+        </>
+      )}
     </>
   );
 }
@@ -2169,6 +2271,241 @@ const styles = `
 
   .nd-back-link:hover {
     color: #111;
+  }
+
+  .nd-dossier-header-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .nd-ai-launcher {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 34px;
+    padding: 0 12px;
+    border: 1px solid #d8d2ca;
+    border-radius: 6px;
+    background: #fffaf5;
+    color: #8b421e;
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .08em;
+  }
+
+  .nd-ai-launcher:hover,
+  .nd-ai-launcher:focus-visible {
+    border-color: #b75a2b;
+    outline: 2px solid rgba(183, 90, 43, .18);
+    outline-offset: 2px;
+  }
+
+  .nd-assistant-backdrop {
+    position: fixed;
+    z-index: 80;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: rgba(23, 23, 23, .22);
+    cursor: default;
+  }
+
+  .nd-assistant-drawer {
+    position: fixed;
+    z-index: 81;
+    top: 0;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    width: min(420px, 100vw);
+    height: 100dvh;
+    border-left: 1px solid #d9d2ca;
+    background: #fffdf9;
+    color: #292521;
+    box-shadow: -10px 0 28px rgba(32, 28, 24, .12);
+    animation: nd-assistant-drawer-in .2s ease-out both;
+  }
+
+  .nd-assistant-drawer-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 22px 20px 18px;
+    border-bottom: 1px solid #e4ddd5;
+  }
+
+  .nd-assistant-drawer-header h2 {
+    margin: 5px 0 0;
+    font-family: "Times New Roman", Times, serif;
+    font-size: 21px;
+    font-weight: 600;
+  }
+
+  .nd-panel-label {
+    margin: 0;
+    color: #a4562b;
+    font-size: 9px;
+    font-weight: 750;
+    letter-spacing: .11em;
+    text-transform: uppercase;
+  }
+
+  .nd-icon-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid #d8d2ca;
+    border-radius: 5px;
+    background: #fff;
+    color: #5c554e;
+    cursor: pointer;
+    font-size: 23px;
+    line-height: 1;
+  }
+
+  .nd-icon-button:hover,
+  .nd-icon-button:focus-visible {
+    border-color: #b75a2b;
+    color: #8b421e;
+    outline: 2px solid rgba(183, 90, 43, .18);
+    outline-offset: 2px;
+  }
+
+  .nd-assistant-drawer-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 18px 20px 26px;
+  }
+
+  .nd-assistant-suggestions {
+    display: grid;
+    gap: 7px;
+    margin-bottom: 16px;
+  }
+
+  .nd-secondary-button {
+    width: 100%;
+    padding: 9px 10px;
+    border: 1px solid #ddd5cc;
+    border-radius: 5px;
+    background: #fff;
+    color: #5b5148;
+    cursor: pointer;
+    font-size: 11px;
+    text-align: left;
+  }
+
+  .nd-secondary-button:hover,
+  .nd-secondary-button:focus-visible {
+    border-color: #bd6a3a;
+    color: #8b421e;
+    outline: 2px solid rgba(183, 90, 43, .15);
+    outline-offset: 1px;
+  }
+
+  .nd-secondary-button:disabled,
+  .nd-primary-button:disabled,
+  .nd-input:disabled {
+    cursor: not-allowed;
+    opacity: .55;
+  }
+
+  .nd-assistant-form {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+    padding-bottom: 18px;
+    border-bottom: 1px solid #e4ddd5;
+  }
+
+  .nd-assistant-form .nd-input {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .nd-assistant-form .nd-primary-button {
+    flex: 0 0 auto;
+    border: 0;
+    cursor: pointer;
+  }
+
+  .nd-assistant-loading,
+  .nd-assistant-unavailable,
+  .nd-assistant-response {
+    margin-top: 18px;
+    padding: 14px;
+    border: 1px solid #e4ddd5;
+    background: #fff;
+    font-size: 12px;
+    line-height: 1.55;
+  }
+
+  .nd-assistant-loading {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: #756b62;
+  }
+
+  .nd-assistant-loading .nd-loading-spinner {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    border-width: 2px;
+  }
+
+  .nd-assistant-unavailable {
+    border-color: #ead8c9;
+    background: #fffaf5;
+  }
+
+  .nd-assistant-unavailable strong {
+    color: #8b421e;
+    font-size: 11px;
+  }
+
+  .nd-assistant-unavailable p,
+  .nd-assistant-response p {
+    margin: 6px 0 0;
+  }
+
+  .nd-assistant-response ul {
+    margin: 7px 0 16px;
+    padding-left: 18px;
+  }
+
+  .nd-assistant-response .nd-panel-label:not(:first-child) {
+    margin-top: 16px;
+  }
+
+  .nd-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  @keyframes nd-assistant-drawer-in {
+    from { transform: translateX(18px); opacity: .7; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .nd-assistant-drawer {
+      animation: none;
+    }
   }
 
   .nd-hero-layout {
