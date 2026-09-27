@@ -63,11 +63,8 @@ const assistantStatusMessage = (response: ApiProjectAssistantResponse) => {
     return "This information is not available in the current project data.";
   }
 
-  if (
-    response.status === "provider_unavailable" &&
-    response.answer === "Drushti AI is not configured on the backend."
-  ) {
-    return "Drushti AI is not configured on the backend.";
+  if (response.status === "provider_unavailable") {
+    return "DRUSHTI AI is temporarily unavailable because the configured AI provider is unavailable.";
   }
 
   if (response.status === "provider_quota_exhausted") {
@@ -75,7 +72,11 @@ const assistantStatusMessage = (response: ApiProjectAssistantResponse) => {
   }
 
   if (response.status === "provider_configuration_error") {
-    return "Drushti AI is not configured on the backend.";
+    return "DRUSHTI AI is unavailable because its provider configuration needs attention.";
+  }
+
+  if (response.status === "invalid_provider_response") {
+    return "DRUSHTI AI is temporarily unavailable because the configured AI provider returned an invalid response.";
   }
 
   return "Drushti AI could not complete the request. Please try again.";
@@ -218,8 +219,6 @@ export default function ProjectDetailPage({
     useRef<HTMLDivElement>(null);
   const assistantInputRef =
     useRef<HTMLInputElement>(null);
-  const assistantRequestInFlightRef =
-    useRef(false);
 
   const [error, setError] =
     useState<string | null>(null);
@@ -235,19 +234,16 @@ export default function ProjectDetailPage({
 
   const askAssistant = async (question = assistantQuestion) => {
     const trimmedQuestion = question.trim();
-    if (!trimmedQuestion || !project || assistantRequestInFlightRef.current) return;
-    assistantRequestInFlightRef.current = true;
+    if (!trimmedQuestion || !project) return;
     setAssistantLoading(true);
     setAssistantError(null);
-    setAssistantResponse(null);
     setAssistantQuestion(trimmedQuestion);
     try {
       const response = await askProjectAssistant(project.id, trimmedQuestion);
       setAssistantResponse(response);
-    } catch {
-      setAssistantError("Drushti AI could not complete the request. Please try again.");
+    } catch (reason) {
+      setAssistantError(reason instanceof Error ? reason.message : "The project assistant is unavailable.");
     } finally {
-      assistantRequestInFlightRef.current = false;
       setAssistantLoading(false);
     }
   };
@@ -613,7 +609,7 @@ export default function ProjectDetailPage({
             PROJECT OVERVIEW
         ========================================================= */}
 
-        <section className="nd-section">
+        <section className="nd-section nd-reveal">
           <div className="nd-container">
 
             <SectionHeading
@@ -688,7 +684,7 @@ export default function ProjectDetailPage({
             FINANCIAL
         ========================================================= */}
 
-        <section className="nd-section nd-section-soft">
+        <section className="nd-section nd-section-soft nd-reveal">
           <div className="nd-container">
 
             <SectionHeading
@@ -728,6 +724,12 @@ export default function ProjectDetailPage({
               />
 
             </div>
+
+            <CostPressureDiagram
+              originalCost={numeric(project.original_cost)}
+              currentCost={numeric(project.current_cost)}
+              expenditure={numeric(project.expenditure)}
+            />
           </div>
         </section>
 
@@ -735,7 +737,7 @@ export default function ProjectDetailPage({
             SCHEDULE
         ========================================================= */}
 
-        <section className="nd-section">
+        <section className="nd-section nd-reveal">
           <div className="nd-container">
 
             <SectionHeading
@@ -846,6 +848,12 @@ export default function ProjectDetailPage({
               </div>
 
             </div>
+
+            <ProgressSignalDiagram
+              current={currentProgress}
+              expected={expectedProgress}
+              progress={progress}
+            />
           </div>
         </section>
 
@@ -853,7 +861,7 @@ export default function ProjectDetailPage({
             RISK
         ========================================================= */}
 
-        <section className="nd-section nd-section-soft">
+        <section className="nd-section nd-section-soft nd-reveal">
           <div className="nd-container">
 
             <SectionHeading
@@ -998,6 +1006,11 @@ export default function ProjectDetailPage({
 
             </div>
 
+            <RiskSignalDiagram
+              score={numeric(risk.score)}
+              factors={risk.factors}
+            />
+
             {/* WARNINGS */}
 
             {warnings.length > 0 && (
@@ -1099,7 +1112,7 @@ export default function ProjectDetailPage({
             PREDICTIONS
         ========================================================= */}
 
-        <section className="nd-section">
+        <section className="nd-section nd-reveal">
           <div className="nd-container">
 
             <SectionHeading
@@ -1320,7 +1333,7 @@ export default function ProjectDetailPage({
             DETERMINISTIC INTELLIGENCE
         ========================================================= */}
 
-        <section className="nd-section nd-section-soft">
+        <section className="nd-section nd-section-soft nd-reveal">
           <div className="nd-container">
 
             <SectionHeading
@@ -1459,7 +1472,7 @@ export default function ProjectDetailPage({
             ACTIONS
         ========================================================= */}
 
-        <section className="nd-section">
+        <section className="nd-section nd-reveal">
           <div className="nd-container">
 
             <SectionHeading
@@ -1578,7 +1591,7 @@ export default function ProjectDetailPage({
             HISTORY
         ========================================================= */}
 
-        <section className="nd-section nd-section-soft">
+        <section className="nd-section nd-section-soft nd-reveal">
           <div className="nd-container">
 
             <SectionHeading
@@ -2045,7 +2058,6 @@ export default function ProjectDetailPage({
               <div>
                 <span className="nd-panel-label">DRUSHTI AI</span>
                 <h2 id="drushti-ai-title">Project Intelligence Assistant</h2>
-                <p className="nd-assistant-subtitle">Ask about this project&apos;s data, risks and warnings.</p>
               </div>
               <button
                 type="button"
@@ -2102,7 +2114,7 @@ export default function ProjectDetailPage({
               {assistantLoading && (
                 <div className="nd-assistant-loading" role="status" aria-live="polite">
                   <span className="nd-loading-spinner" />
-                  Analysing project data
+                  Reviewing verified project data...
                 </div>
               )}
 
@@ -2123,14 +2135,12 @@ export default function ProjectDetailPage({
                           : "Assistant unavailable"}
                       </strong>
                       <p>{assistantStatusMessage(assistantResponse)}</p>
-                      {assistantResponse.data_limitations
-                        .filter((item) => item !== assistantStatusMessage(assistantResponse))
-                        .map((item) => <p key={item}>{item}</p>)}
+                      {assistantResponse.data_limitations.map((item) => <p key={item}>{item}</p>)}
                     </div>
                   ) : (
                     <>
                       <p className="nd-panel-label">ANSWER</p>
-                      <p className="nd-assistant-answer">{assistantResponse.answer}</p>
+                      <p>{assistantResponse.answer}</p>
                       {assistantResponse.key_points.length > 0 && (
                         <>
                           <p className="nd-panel-label">KEY POINTS</p>
@@ -2253,19 +2263,239 @@ function UnavailablePrediction({
 }
 
 /* ================================================================
+   STATIC DATA-DERIVED DIAGRAMS
+================================================================ */
+
+function DiagramFrame({
+  eyebrow,
+  title,
+  description,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="nd-diagram-frame">
+      <div className="nd-diagram-heading">
+        <div>
+          <span>{eyebrow}</span>
+          <h3>{title}</h3>
+          <p>{description}</p>
+        </div>
+        <span className="nd-diagram-index">DATA VIEW</span>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function CostPressureDiagram({
+  originalCost,
+  currentCost,
+  expenditure,
+}: {
+  originalCost: number | null;
+  currentCost: number | null;
+  expenditure: number | null;
+}) {
+  const values = [originalCost, currentCost, expenditure];
+  const available = values.filter((value): value is number => value !== null && Number.isFinite(value));
+  if (available.length === 0) return null;
+
+  const max = Math.max(...available, 1);
+  const items = [
+    { label: "Original", value: originalCost, tone: "base" },
+    { label: "Current", value: currentCost, tone: "current" },
+    { label: "Expenditure", value: expenditure, tone: "spend" },
+  ];
+
+  return (
+    <DiagramFrame
+      eyebrow="FINANCIAL POSITION"
+      title="Cost pressure at a glance"
+      description="Reported financial values shown on one common scale."
+    >
+      <div className="nd-cost-diagram">
+        {items.map((item, index) => {
+          const width = item.value === null || !Number.isFinite(item.value)
+            ? 0
+            : Math.max(3, (item.value / max) * 100);
+          return (
+            <div className="nd-cost-row" key={item.label} style={{ "--nd-delay": `${index * 90}ms` } as React.CSSProperties}>
+              <div className="nd-cost-row-label">
+                <span>{item.label}</span>
+                <strong>{item.value === null || !Number.isFinite(item.value) ? "Not available" : money(item.value)}</strong>
+              </div>
+              <div className="nd-cost-track" aria-hidden="true">
+                <div className={`nd-cost-bar nd-cost-bar-${item.tone}`} style={{ width: `${width}%` }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </DiagramFrame>
+  );
+}
+
+function ProgressSignalDiagram({
+  current,
+  expected,
+  progress,
+}: {
+  current: number | null;
+  expected: number | null;
+  progress: ApiProjectHistory["progress"];
+}) {
+  const points: Array<{ value: number; date: string }> = progress.flatMap((item) => {
+    const value = numeric(item.physical_progress);
+
+    if (value === null || !Number.isFinite(value)) {
+      return [];
+    }
+
+    return [{
+      value,
+      date: item.reporting_period,
+    }];
+  });
+
+  if (current === null && expected === null && points.length === 0) return null;
+
+  const currentWidth = current === null ? 0 : Math.min(100, Math.max(0, current));
+  const expectedWidth = expected === null ? 0 : Math.min(100, Math.max(0, expected));
+
+  return (
+    <DiagramFrame
+      eyebrow="DELIVERY SIGNAL"
+      title="Physical progress versus expectation"
+      description="The comparison is derived from the project's reported progress fields."
+    >
+      <div className="nd-progress-diagram">
+        <div className="nd-progress-axis">
+          <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
+        </div>
+        <div className="nd-progress-compare">
+          <span>Expected</span>
+          <div className="nd-compare-track"><div className="nd-compare-fill nd-compare-expected" style={{ width: `${expectedWidth}%` }} /></div>
+          <strong>{expected === null ? "N/A" : `${expected}%`}</strong>
+        </div>
+        <div className="nd-progress-compare">
+          <span>Physical</span>
+          <div className="nd-compare-track"><div className="nd-compare-fill nd-compare-current" style={{ width: `${currentWidth}%` }} /></div>
+          <strong>{current === null ? "N/A" : `${current}%`}</strong>
+        </div>
+        {current !== null && expected !== null && (
+          <div className={`nd-progress-gap ${current < expected ? "nd-gap-alert" : "nd-gap-good"}`}>
+            <span>Current position</span>
+            <strong>{current >= expected ? "At / above expected" : `${(expected - current).toFixed(1)} percentage points below expected`}</strong>
+          </div>
+        )}
+      </div>
+
+      {points.length > 1 && (
+        <div className="nd-sparkline-wrap">
+          <svg viewBox="0 0 640 90" preserveAspectRatio="none" role="img" aria-label="Historical physical progress trajectory" className="nd-sparkline">
+            <line x1="0" y1="75" x2="640" y2="75" className="nd-spark-grid" />
+            <line x1="0" y1="45" x2="640" y2="45" className="nd-spark-grid" />
+            <line x1="0" y1="15" x2="640" y2="15" className="nd-spark-grid" />
+            <polyline
+              points={points.map((point, index) => {
+                const x = points.length === 1 ? 320 : (index / (points.length - 1)) * 640;
+                const value = Math.min(100, Math.max(0, point.value));
+                const y = 75 - (value / 100) * 60;
+                return `${x},${y}`;
+              }).join(" ")}
+              className="nd-spark-line"
+              fill="none"
+            />
+            {points.map((point, index) => {
+              const x = points.length === 1 ? 320 : (index / (points.length - 1)) * 640;
+              const value = Math.min(100, Math.max(0, point.value));
+              const y = 75 - (value / 100) * 60;
+              return <circle key={`${point.date}-${index}`} cx={x} cy={y} r="3" className="nd-spark-point" />;
+            })}
+          </svg>
+          <div className="nd-spark-caption">
+            <span>{dateLabel(points[0].date)}</span>
+            <span>{points.length} reported observations</span>
+            <span>{dateLabel(points[points.length - 1].date)}</span>
+          </div>
+        </div>
+      )}
+    </DiagramFrame>
+  );
+}
+
+function RiskSignalDiagram({
+  score,
+  factors,
+}: {
+  score: number | null;
+  factors: ApiRiskAssessment["factors"];
+}) {
+  const available = factors.filter((factor) => factor.available && factor.factor !== "data_coverage");
+  if (score === null && available.length === 0) return null;
+
+  const severityWeight: Record<string, number> = {
+    critical: 100,
+    high: 80,
+    medium: 55,
+    low: 25,
+  };
+
+  return (
+    <DiagramFrame
+      eyebrow="RISK SIGNAL MAP"
+      title="Assessment structure"
+      description="Available factors are shown by reported severity; no new risk score is calculated here."
+    >
+      <div className="nd-risk-map">
+        <div className="nd-risk-score-ring" aria-label={score === null ? "Risk score unavailable" : `Risk score ${score}`}>
+          <div>
+            <span>RISK</span>
+            <strong>{score === null ? "—" : Math.round(score)}</strong>
+            <small>/ 100</small>
+          </div>
+        </div>
+        <div className="nd-risk-map-list">
+          {available.length === 0 ? (
+            <div className="nd-map-empty">No scored risk factors available.</div>
+          ) : available.slice(0, 6).map((factor) => {
+            const severity = String(factor.severity ?? "neutral").toLowerCase();
+            const width = severityWeight[severity] ?? 20;
+            return (
+              <div className="nd-map-row" key={factor.factor}>
+                <div>
+                  <span>{factor.factor.replaceAll("_", " ")}</span>
+                  <strong>{factor.severity || "Not available"}</strong>
+                </div>
+                <div className="nd-map-track"><div className={`nd-map-fill nd-map-${severity}`} style={{ width: `${width}%` }} /></div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </DiagramFrame>
+  );
+}
+
+/* ================================================================
    STYLES
 ================================================================ */
 
 const styles = `
   :root {
-    --nd-bg: #f6f7f8;
+    --nd-bg: #fcfbf8;
     --nd-card: #ffffff;
-    --nd-card-soft: #fafafa;
+    --nd-card-soft: #f5f2ec;
     --nd-text: #171717;
     --nd-muted: #737373;
     --nd-light: #a1a1a1;
-    --nd-line: #e5e7eb;
-    --nd-line-light: #eeeeee;
+    --nd-line: #dedad2;
+    --nd-line-light: #ebe7e0;
     --nd-dark: #171717;
   }
 
@@ -2278,6 +2508,222 @@ const styles = `
     background: var(--nd-bg);
     color: var(--nd-text);
   }
+
+  .nd-reveal {
+    animation: nd-section-reveal 720ms cubic-bezier(.22,1,.36,1) both;
+  }
+
+  .nd-reveal:nth-of-type(2) { animation-delay: 70ms; }
+  .nd-reveal:nth-of-type(3) { animation-delay: 120ms; }
+  .nd-reveal:nth-of-type(4) { animation-delay: 170ms; }
+
+  @keyframes nd-section-reveal {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .nd-project-hero {
+    animation: nd-hero-in 760ms cubic-bezier(.22,1,.36,1) both;
+  }
+
+  @keyframes nd-hero-in {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .nd-metric-card,
+  .nd-risk-factor-card,
+  .nd-warning-card,
+  .nd-prediction-card,
+  .nd-action-card,
+  .nd-info-item {
+    transition: border-color 220ms ease, background-color 220ms ease, transform 220ms ease;
+  }
+
+  .nd-metric-card:hover,
+  .nd-risk-factor-card:hover,
+  .nd-warning-card:hover,
+  .nd-prediction-card:hover,
+  .nd-action-card:hover {
+    border-color: #cfc8bf;
+    transform: translateY(-2px);
+  }
+
+  .nd-diagram-frame {
+    margin-top: 16px;
+    padding: 20px;
+    border: 1px solid var(--nd-line);
+    background: rgba(255,255,255,.78);
+    overflow: hidden;
+  }
+
+  .nd-diagram-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--nd-line-light);
+  }
+
+  .nd-diagram-heading span:first-child {
+    display: block;
+    color: #9a6b50;
+    font-size: 9px;
+    font-weight: 750;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+  }
+
+  .nd-diagram-heading h3 {
+    margin: 5px 0 0;
+    font-size: 15px;
+    font-weight: 650;
+    letter-spacing: -.015em;
+  }
+
+  .nd-diagram-heading p {
+    margin: 5px 0 0;
+    color: #858585;
+    font-size: 10px;
+  }
+
+  .nd-diagram-index {
+    padding: 5px 7px;
+    border: 1px solid #ded8d0;
+    color: #8c857d;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    white-space: nowrap;
+  }
+
+  .nd-cost-diagram {
+    display: grid;
+    gap: 16px;
+    padding-top: 19px;
+  }
+
+  .nd-cost-row {
+    animation: nd-bar-in 680ms cubic-bezier(.22,1,.36,1) var(--nd-delay) both;
+  }
+
+  @keyframes nd-bar-in {
+    from { opacity: 0; transform: translateX(-12px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .nd-cost-row-label {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 7px;
+  }
+
+  .nd-cost-row-label span { color: #777; font-size: 10px; font-weight: 650; }
+  .nd-cost-row-label strong { color: #333; font-size: 10px; font-weight: 650; }
+
+  .nd-cost-track, .nd-compare-track, .nd-map-track {
+    height: 8px;
+    overflow: hidden;
+    background: #ece9e4;
+  }
+
+  .nd-cost-bar, .nd-compare-fill, .nd-map-fill {
+    height: 100%;
+    transform-origin: left center;
+    animation: nd-fill-in 900ms cubic-bezier(.22,1,.36,1) both;
+  }
+
+  .nd-cost-bar-base { background: #8d8a84; }
+  .nd-cost-bar-current { background: #242424; }
+  .nd-cost-bar-spend { background: #b9b3aa; }
+
+  @keyframes nd-fill-in { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+  .nd-progress-diagram { padding-top: 18px; }
+
+  .nd-progress-axis {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    margin-left: 82px;
+    color: #aaa39b;
+    font-size: 8px;
+  }
+  .nd-progress-axis span:not(:first-child) { text-align: right; }
+
+  .nd-progress-compare {
+    display: grid;
+    grid-template-columns: 70px 1fr 52px;
+    align-items: center;
+    gap: 12px;
+    margin-top: 11px;
+  }
+  .nd-progress-compare > span { color: #777; font-size: 10px; font-weight: 650; }
+  .nd-progress-compare > strong { color: #333; font-size: 10px; text-align: right; }
+  .nd-compare-expected { background: #aaa59d; }
+  .nd-compare-current { background: #202020; }
+
+  .nd-progress-gap {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 15px;
+    padding: 10px 12px;
+    border-left: 2px solid #777;
+    background: #f7f5f1;
+  }
+  .nd-progress-gap span { color: #8a847d; font-size: 9px; text-transform: uppercase; letter-spacing: .06em; }
+  .nd-progress-gap strong { font-size: 10px; }
+  .nd-gap-alert { border-left-color: #f26a21; }
+  .nd-gap-alert strong { color: #a04a1c; }
+  .nd-gap-good { border-left-color: #3b7a57; }
+  .nd-gap-good strong { color: #3b7a57; }
+
+  .nd-sparkline-wrap { margin-top: 18px; padding-top: 15px; border-top: 1px solid var(--nd-line-light); }
+  .nd-sparkline { width: 100%; height: 90px; display: block; }
+  .nd-spark-grid { stroke: #e9e5df; stroke-width: 1; }
+  .nd-spark-line { stroke: #242424; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; animation: nd-draw-line 1.1s ease both; }
+  .nd-spark-point { fill: #fff; stroke: #242424; stroke-width: 2; animation: nd-point-in 450ms ease both; }
+  @keyframes nd-draw-line { from { stroke-dasharray: 1000; stroke-dashoffset: 1000; } to { stroke-dasharray: 1000; stroke-dashoffset: 0; } }
+  @keyframes nd-point-in { from { opacity: 0; } to { opacity: 1; } }
+  .nd-spark-caption { display: flex; justify-content: space-between; color: #9a958e; font-size: 8px; }
+
+  .nd-risk-map {
+    display: grid;
+    grid-template-columns: 160px 1fr;
+    align-items: center;
+    gap: 28px;
+    padding-top: 20px;
+  }
+
+  .nd-risk-score-ring {
+    width: 132px;
+    height: 132px;
+    margin: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 7px solid #ece8e1;
+    border-top-color: #f26a21;
+    border-right-color: #f26a21;
+    border-radius: 50%;
+    animation: nd-ring-in 900ms cubic-bezier(.22,1,.36,1) both;
+  }
+  @keyframes nd-ring-in { from { transform: rotate(-40deg) scale(.86); opacity: .3; } to { transform: rotate(0) scale(1); opacity: 1; } }
+  .nd-risk-score-ring > div { text-align: center; }
+  .nd-risk-score-ring span, .nd-risk-score-ring small { display: block; color: #999; font-size: 8px; font-weight: 700; letter-spacing: .08em; }
+  .nd-risk-score-ring strong { display: inline-block; margin: 4px 2px 0; font-size: 31px; font-weight: 680; letter-spacing: -.05em; }
+  .nd-risk-map-list { display: grid; gap: 12px; }
+  .nd-map-row > div:first-child { display: flex; justify-content: space-between; gap: 15px; margin-bottom: 6px; }
+  .nd-map-row span { color: #666; font-size: 9px; text-transform: capitalize; }
+  .nd-map-row strong { color: #555; font-size: 8px; text-transform: uppercase; letter-spacing: .05em; }
+  .nd-map-low { background: #3b7a57; }
+  .nd-map-medium { background: #a88745; }
+  .nd-map-high, .nd-map-critical { background: #f26a21; }
+  .nd-map-neutral { background: #aaa; }
+  .nd-map-empty { color: #999; font-size: 10px; padding: 15px 0; }
 
   .nd-container {
     width: min(1440px, calc(100% - 48px));
@@ -2361,7 +2807,7 @@ const styles = `
     border-left: 1px solid #d9d2ca;
     background: #fffdf9;
     color: #292521;
-    box-shadow: -10px 0 28px rgba(32, 28, 24, .12);
+    box-shadow: none;
     animation: nd-assistant-drawer-in .2s ease-out both;
   }
 
@@ -2379,13 +2825,6 @@ const styles = `
     font-family: "Times New Roman", Times, serif;
     font-size: 21px;
     font-weight: 600;
-  }
-
-  .nd-assistant-subtitle {
-    margin: 5px 0 0;
-    color: #756b62;
-    font-size: 11px;
-    line-height: 1.45;
   }
 
   .nd-panel-label {
@@ -2523,11 +2962,6 @@ const styles = `
     padding-left: 18px;
   }
 
-  .nd-assistant-answer {
-    white-space: pre-line;
-    line-height: 1.7;
-  }
-
   .nd-assistant-response .nd-panel-label:not(:first-child) {
     margin-top: 16px;
   }
@@ -2550,8 +2984,17 @@ const styles = `
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .nd-assistant-drawer {
-      animation: none;
+    .nd-assistant-drawer,
+    .nd-project-hero,
+    .nd-reveal,
+    .nd-cost-row,
+    .nd-cost-bar,
+    .nd-compare-fill,
+    .nd-spark-line,
+    .nd-spark-point,
+    .nd-risk-score-ring {
+      animation: none !important;
+      transition: none !important;
     }
   }
 
@@ -3850,6 +4293,21 @@ const styles = `
     .nd-action-grid {
       grid-template-columns: 1fr;
       gap: 12px;
+    }
+  }
+
+  @media (max-width: 800px) {
+    .nd-risk-map {
+      grid-template-columns: 1fr;
+      gap: 18px;
+    }
+    .nd-risk-score-ring {
+      width: 112px;
+      height: 112px;
+    }
+    .nd-progress-compare {
+      grid-template-columns: 58px 1fr 45px;
+      gap: 8px;
     }
   }
 
