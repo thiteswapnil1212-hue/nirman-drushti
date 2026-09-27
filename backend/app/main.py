@@ -42,6 +42,7 @@ async def unhandled_exception_handler(request: Request, _: Exception) -> JSONRes
 
 
 @app.get("/health", tags=["system"])
+@app.get("/api/v1/health", tags=["system"])
 def health() -> dict[str, str]:
     return {"status": "ok"}
 
