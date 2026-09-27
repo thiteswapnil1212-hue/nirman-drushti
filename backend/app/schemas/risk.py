@@ -1,8 +1,9 @@
+from datetime import date
 from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 RiskLevel = Literal["LOW", "MODERATE", "HIGH", "CRITICAL", "UNAVAILABLE"]
@@ -33,6 +34,30 @@ class RiskAssessment(BaseModel):
     explanation: str
     limitations: list[str]
     predicted: bool = False
+
+
+class RiskScenarioInput(BaseModel):
+    """Officer-supplied values for a non-persistent risk-logic scenario."""
+
+    current_cost: Decimal | None = Field(default=None, ge=0)
+    expenditure: Decimal | None = Field(default=None, ge=0)
+    physical_progress: Decimal | None = Field(default=None, ge=0, le=100)
+    expected_completion_date: date | None = None
+
+    @model_validator(mode="after")
+    def require_a_change(self) -> "RiskScenarioInput":
+        if not self.model_fields_set:
+            raise ValueError("At least one scenario input is required")
+        return self
+
+
+class RiskScenarioResponse(BaseModel):
+    project_id: UUID
+    baseline: RiskAssessment
+    scenario: RiskAssessment
+    applied_inputs: list[str]
+    changed_factors: list[str]
+    explanation: str
 
 
 class RiskPortfolioItem(BaseModel):
