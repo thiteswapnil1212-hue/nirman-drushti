@@ -11,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.project import CostHistory, ProgressHistory, Project
-from app.schemas.risk import RiskAssessment, RiskFactor, RiskPortfolioItem, RiskSummary, RiskSummaryResponse
+from app.schemas.risk import RiskAssessment, RiskFactor, RiskPortfolioItem, RiskScenarioInput, RiskScenarioResponse, RiskSummary, RiskSummaryResponse
 from app.services.analytics import AnalyticsFilters, _project_filters
 from app.services.projects import ProjectNotFoundError
 
@@ -211,6 +211,44 @@ def get_project_bundle(database: Session, project_id: UUID) -> ProjectBundle:
 
 def build_risk_assessment(database: Session, project_id: UUID) -> RiskAssessment:
     return assess_project(get_project_bundle(database, project_id))
+
+
+def build_risk_scenario(database: Session, project_id: UUID, inputs: RiskScenarioInput) -> RiskScenarioResponse:
+    """Evaluate supplied inputs with the same deterministic rules as baseline risk.
+
+    The clone is deliberately not attached to the session, so scenario work cannot
+    alter reported project data.
+    """
+    bundle = get_project_bundle(database, project_id)
+    values = {column.key: getattr(bundle.project, column.key) for column in Project.__table__.columns}
+    scenario_project = Project(**values)
+    applied_inputs: list[str] = []
+    for field in ("current_cost", "expenditure", "physical_progress", "expected_completion_date"):
+        if field in inputs.model_fields_set:
+            setattr(scenario_project, field, getattr(inputs, field))
+            applied_inputs.append(field)
+
+    baseline = assess_project(bundle)
+    scenario = assess_project(ProjectBundle(scenario_project, bundle.progress, bundle.costs))
+    baseline_factors = {factor.factor: factor for factor in baseline.factors}
+    changed_factors = [
+        factor.factor
+        for factor in scenario.factors
+        if (
+            factor.factor not in baseline_factors
+            or factor.contribution != baseline_factors[factor.factor].contribution
+            or factor.value != baseline_factors[factor.factor].value
+            or factor.available != baseline_factors[factor.factor].available
+        )
+    ]
+    return RiskScenarioResponse(
+        project_id=project_id,
+        baseline=baseline,
+        scenario=scenario,
+        applied_inputs=applied_inputs,
+        changed_factors=changed_factors,
+        explanation="Illustrative impact using the current deterministic risk logic. This scenario is not a forecast.",
+    )
 
 
 def build_risk_summary(database: Session, filters: AnalyticsFilters | None = None) -> RiskSummaryResponse:
