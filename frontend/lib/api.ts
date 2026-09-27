@@ -477,6 +477,22 @@ export interface ApiRiskAssessment {
   predicted: boolean;
 }
 
+export interface ApiRiskScenarioInput {
+  current_cost?: number;
+  expenditure?: number;
+  physical_progress?: number;
+  expected_completion_date?: string;
+}
+
+export interface ApiRiskScenarioResponse {
+  project_id: string;
+  baseline: ApiRiskAssessment;
+  scenario: ApiRiskAssessment;
+  applied_inputs: string[];
+  changed_factors: string[];
+  explanation: string;
+}
+
 export interface ApiRiskPortfolioItem {
   project_id: string;
   project_name: string;
@@ -611,6 +627,22 @@ function filterQuery(params: RiskFilterParams): string {
 
 export function getProjectRisk(projectId: string, options?: RequestInit): Promise<ApiRiskAssessment> {
   return apiRequest<ApiRiskAssessment>(`/api/v1/projects/${encodeURIComponent(projectId)}/risk`, { ...PROJECT_FETCH_OPTIONS, ...options });
+}
+
+export function assessProjectRiskScenario(
+  projectId: string,
+  input: ApiRiskScenarioInput,
+  options?: RequestInit,
+): Promise<ApiRiskScenarioResponse> {
+  return apiRequest<ApiRiskScenarioResponse>(
+    `/api/v1/projects/${encodeURIComponent(projectId)}/risk/scenario`,
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(options?.headers ?? {}) },
+      body: JSON.stringify(input),
+    },
+  );
 }
 
 export function getProjectWarnings(projectId: string, options?: RequestInit): Promise<ApiEarlyWarning[]> {
