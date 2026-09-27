@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.project import ProjectStatus
 from app.schemas.project import ProjectCreate, ProjectHistoryResponse, ProjectPage, ProjectResponse, ProjectUpdate, ProjectIntelligenceResponse, CostIntelligenceResponse
-from app.schemas.risk import RiskAssessment
+from app.schemas.risk import RiskAssessment, RiskScenarioInput, RiskScenarioResponse
 from app.schemas.warnings import EarlyWarning
 from app.schemas.cost_prediction import CostRevisionPrediction
 from app.schemas.schedule_prediction import ScheduleRevisionPrediction
@@ -23,7 +23,7 @@ from app.services.projects import (
     update_project,
     calculate_project_intelligence,
 )
-from app.services.risk import build_risk_assessment
+from app.services.risk import build_risk_assessment, build_risk_scenario
 from app.services.warnings import build_project_warnings
 from app.services.cost_prediction import predict_project
 from app.services.schedule_prediction import predict_project as predict_schedule_project
@@ -99,6 +99,18 @@ def read_cost_revision_prediction(project_id: UUID, database: Session = Depends(
     try:
         return predict_project(database, project_id)
     except LookupError as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found") from error
+
+
+@router.post("/{project_id}/risk/scenario", response_model=RiskScenarioResponse)
+def assess_project_risk_scenario(
+    project_id: UUID,
+    payload: RiskScenarioInput,
+    database: Session = Depends(get_db),
+) -> RiskScenarioResponse:
+    try:
+        return build_risk_scenario(database, project_id, payload)
+    except ProjectNotFoundError as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found") from error
 
 
