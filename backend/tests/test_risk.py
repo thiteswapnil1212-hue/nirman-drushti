@@ -8,7 +8,8 @@ from app.api.routes import projects as projects_route
 from app.db.session import get_db
 from app.main import app
 from app.models.project import ProgressHistory, Project
-from app.services.risk import ProjectBundle, assess_project
+from app.schemas.risk import RiskScenarioInput
+from app.services.risk import ProjectBundle, assess_project, build_risk_scenario
 
 client = TestClient(app)
 
@@ -104,3 +105,32 @@ def test_project_risk_endpoint_is_typed(monkeypatch) -> None:
     assert response.status_code == 200
     assert response.json()["predicted"] is False
     assert response.json()["level"] == "LOW"
+
+
+def test_scenario_reuses_risk_thresholds_without_mutating_reported_project(monkeypatch) -> None:
+    project = project_fixture(current_cost=Decimal("100"))
+    source_bundle = bundle(project)
+    monkeypatch.setattr("app.services.risk.get_project_bundle", lambda database, project_id: source_bundle)
+
+    result = build_risk_scenario(None, project.id, RiskScenarioInput(current_cost=Decimal("120")))
+
+    assert result.baseline.level == "LOW"
+    assert factor(result.scenario, "cost_escalation").severity == "HIGH"
+    assert "cost_escalation" in result.changed_factors
+    assert project.current_cost == Decimal("100")
+    assert result.scenario.predicted is False
+
+
+def test_project_risk_scenario_endpoint_is_typed(monkeypatch) -> None:
+    project = project_fixture()
+    monkeypatch.setattr("app.services.risk.get_project_bundle", lambda database, project_id: bundle(project))
+    scenario = build_risk_scenario(None, project.id, RiskScenarioInput(current_cost=Decimal("120")))
+    monkeypatch.setattr(projects_route, "build_risk_scenario", lambda database, project_id, payload: scenario)
+    app.dependency_overrides[get_db] = lambda: object()
+    try:
+        response = client.post(f"/api/v1/projects/{project.id}/risk/scenario", json={"current_cost": "120"})
+    finally:
+        app.dependency_overrides.clear()
+    assert response.status_code == 200
+    assert response.json()["scenario"]["predicted"] is False
+    assert response.json()["applied_inputs"] == ["current_cost"]
