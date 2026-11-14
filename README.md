@@ -102,14 +102,14 @@ Backend → Feature Engineering → ML → Explainability → Warnings
 ### Backend
 
 ``` powershell
-cd "D:\SIH project\backend"
+cd backend
 .\.venv\Scripts\uvicorn.exe app.main:app --host 0.0.0.0 --port 8000
 ```
 
 ### Frontend
 
 ``` powershell
-cd "D:\SIH project\frontend"
+cd frontend
 npm run dev -- --hostname 0.0.0.0 --port 3000
 ```
 
