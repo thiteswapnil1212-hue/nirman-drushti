@@ -7,6 +7,8 @@ that organizes project-monitoring data, calculates transparent project
 indicators, and provides a foundation for predictive risk analysis and
 early warnings.
 
+Live demo: https://frontend-thiteswapnil1212-hues-projects.vercel.app/
+
 ## Product Idea
 
 ``` text
@@ -67,6 +69,13 @@ PAIMANA / OCMS Reports
 Future:
 Backend → Feature Engineering → ML → Explainability → Warnings
 ```
+
+## Screenshots
+
+![Project intelligence](project_intelligence_screenshot.png)
+![Risk intelligence](risk_intelligence_screenshot.png)
+![Early warnings](early_warnings_screenshot.png)
+![Insufficient data](insufficient_data_screenshot.png)
 
 ## Tech Stack
 
